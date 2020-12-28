@@ -1,0 +1,14 @@
+[package]
+name = "fh-http"
+version = "0.1.0"
+authors = ["Tim Eggert <tim@elbart.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = {version="0.2", features=["full"]}
+warp = "0.2"
+fh-v8 = {version="0.1", path="../fh-v8"}
+anyhow = "1"
+futures = "0.3"

@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "fh-v8",
+    "fh-http",
+]

@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "fh-http"
+		},
+		{
+			"path": "fh-v8"
+		}
+	],
+	"settings": {}
+}

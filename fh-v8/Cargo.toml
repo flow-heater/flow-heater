@@ -1,0 +1,16 @@
+[package]
+name = "fh-v8"
+version = "0.1.0"
+authors = ["Tim Eggert <tim@elbart.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+deno_core = "0.74"
+tokio = { version = "0.2", features = ["full"]}
+serde_json = "1"
+serde = "1"
+warp = "0.2"
+parking_lot = "0.11"
+anyhow = "1"
