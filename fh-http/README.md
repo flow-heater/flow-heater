@@ -1,4 +1,4 @@
-# Flow Heater Core
+# Flow Heater HTTP
 
 ## Example
 
@@ -8,13 +8,13 @@ Compile and run the `fh-http` binary with:
 cargo run --bin fh-http
 ```
 
-On another terminal, run an HTTP request to `localhost:3030/hello/foo`:
+On another terminal, issue an HTTP request to `localhost:3030/hello/foo`:
 
 ```bash
 curl "localhost:3030/hello/foo"
 ```
 
-The `fh-http` process spits out some lines to stdout including a simple `"Hello from deno!"` line, which should indicate, that the deno runtime runs asynchronously behind an the warp http server.
+The `fh-http` process spits out some lines to stdout including a simple `"Hello from deno!"` line, which should indicate, that the deno runtime runs asynchronously behind the warp http server.
 ```bash
 $> cargo run --bin fh-http
     Finished dev [unoptimized + debuginfo] target(s) in 0.05s
