@@ -1,13 +1,8 @@
 use anyhow::Result;
 use fh_v8::{process_request, Request, Response};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, oneshot};
 use warp::{self, http, Filter, Rejection, Reply};
-
-use futures::Stream;
 
 type Responder<T> = oneshot::Sender<T>;
 type ReqSender<T> = Arc<Mutex<mpsc::Sender<T>>>;
@@ -43,17 +38,20 @@ pub(crate) fn with_sender(
 }
 
 pub fn extract_request(
-) -> impl Filter<Extract = (http::Request<impl Stream>,), Error = warp::Rejection> + Copy {
+) -> impl Filter<Extract = (http::Request<Vec<u8>>,), Error = warp::Rejection> + Copy {
     warp::method()
         .and(warp::path::full())
         .and(warp::header::headers_cloned())
-        .and(warp::body::stream())
+        .and(warp::body::bytes())
         .map(
-            |method: http::Method, path: warp::path::FullPath, headers: http::HeaderMap, body| {
+            |method: http::Method,
+             path: warp::path::FullPath,
+             headers: http::HeaderMap,
+             body: warp::hyper::body::Bytes| {
                 let mut req = http::Request::builder()
                     .method(method)
                     .uri(path.as_str())
-                    .body(body)
+                    .body(body.iter().cloned().collect::<Vec<u8>>())
                     .expect("request builder");
                 {
                     *req.headers_mut() = headers;
@@ -66,12 +64,12 @@ pub fn extract_request(
 async fn hello_handler(
     _name: String,
     tx: ReqSender<ReqCmd>,
-    _request: http::Request<impl Stream>,
+    request: http::Request<Vec<u8>>,
 ) -> Result<impl Reply, Rejection> {
     let mut tx2 = tx.lock().unwrap().clone();
     let (resp_tx, resp_rx) = oneshot::channel();
 
-    let req = Request::new(HashMap::new(), None);
+    let req = Request::from(request);
     tx2.send(ReqCmd::Http {
         request: req,
         cmd_tx: resp_tx,
