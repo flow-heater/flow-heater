@@ -15,8 +15,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Setup Just
+      uses: extractions/setup-just@v1
+      with:
+        just-version: 0.8.3
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
     - uses: actions/checkout@v2
     - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      run: just build
+    - name: Run unit tests
+      run: just test
+    - name: Run e2e tests
+      run: just test-e2e

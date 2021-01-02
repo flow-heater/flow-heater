@@ -1,1 +1,9 @@
+# Rust
 /target
+
+# Python
+__pycache__
+.venv
+
+# IDEs
+.idea
