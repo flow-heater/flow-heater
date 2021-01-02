@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "fh-v8"
+		},
+		{
+			"path": "."
 		}
 	],
 	"settings": {}
