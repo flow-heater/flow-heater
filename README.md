@@ -31,3 +31,15 @@ RUST: modified request is: Request { headers: {"content-length": "9", "user-agen
 ```
 
 As you can see in the `modified request`, the method and the body is patched, as well as the `content-type` header.
+
+
+## Tests
+Invoke unit tests:
+```bash
+just test
+```
+
+Invoke end-to-end tests:
+```bash
+just test-e2e
+```
