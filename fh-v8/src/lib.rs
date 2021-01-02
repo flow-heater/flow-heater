@@ -8,7 +8,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use warp::http;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Request {
     headers: HashMap<String, String>,
     body: String,
@@ -17,7 +17,7 @@ pub struct Request {
     query: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Response {
     code: usize,
     headers: HashMap<String, String>,
@@ -89,11 +89,11 @@ pub async fn process_request(req: Request) -> Response {
     let state = js_runtime.op_state();
     let op_state = state.borrow();
     let modified_req = op_state.borrow::<Request>();
-    println!("Modified req: {:?}", modified_req);
+    println!("RUST: modified request is: {:?}", modified_req);
 
     Response {
         code: 200,
         headers: HashMap::new(),
-        body: None,
+        body: Some(modified_req.body.as_bytes().to_vec()),
     }
 }

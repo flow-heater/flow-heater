@@ -73,9 +73,9 @@ async fn hello_handler(
     })
     .await
     .unwrap();
-    let _res = resp_rx.await;
+    let res = resp_rx.await.unwrap().unwrap();
     // println!("GOT response: {:?}", res);
-    Ok(warp::reply::reply())
+    Ok(warp::reply::json(&res))
 }
 
 async fn web_server(tx: ReqSender<ReqCmd>) {
