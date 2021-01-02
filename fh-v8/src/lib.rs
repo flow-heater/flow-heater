@@ -39,7 +39,7 @@ fn op_dispatch_request(
     _bufs: &mut [ZeroCopyBuf],
 ) -> Result<Value, AnyError> {
     let r: Request = serde_json::from_value(args).unwrap();
-    state.borrow_mut::<Request>().method = r.method;
+    *state.borrow_mut::<Request>() = r;
     Ok(serde_json::json!(()))
 }
 

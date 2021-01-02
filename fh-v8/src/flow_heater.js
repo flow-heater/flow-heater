@@ -7,7 +7,7 @@ Deno.core.print(`Got request body: ${request.body}, headers: ${request.headers},
 
 // modify the requests method
 request.method = 'POST';
-// request.body = "this is the patched body";
-// request.headers['Content-Type'] = 'application/json';
+request.body = "this is the patched body";
+request.headers['content-type'] = 'application/json';
 
 Deno.core.jsonOpSync("dispatch_request", request);
