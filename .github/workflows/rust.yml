@@ -2,52 +2,57 @@ name: Rust
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
+  DATABASE_URL: sqlite:fh-http.db
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
+      # Smart caching for rust/cargo projects with sensible defaults.
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v1
 
-    # Smart caching for rust/cargo projects with sensible defaults.
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-    - uses: Swatinem/rust-cache@v1
+      # Setup Just command runner.
+      - name: Setup Just
+        uses: extractions/setup-just@v1
+        with:
+          just-version: 0.8
+        env:
+          # This is not required but add it if you get any rate limiting issues.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # Setup Just command runner.
-    - name: Setup Just
-      uses: extractions/setup-just@v1
-      with:
-        just-version: 0.8
-      env:
-        # This is not required but add it if you get any rate limiting issues.
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Setup Python for running e2e tests.
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
 
-    # Setup Python for running e2e tests.
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
+      # Acquire sources.
+      - uses: actions/checkout@v2
 
-    # Acquire sources.
-    - uses: actions/checkout@v2
+      # Setup sqlx and run db migrations
+      - name: Install sqlx cli
+        run: cargo install sqlx-cli
+      - name: Create DB and run migrations
+        run: just db
 
-    # Invoke build and tests.
-    - name: Build
-      run: just build
-    - name: Run unit tests
-      run: just test
-    - name: Run e2e tests
-      run: just test-e2e
+      # Invoke build and tests.
+      - name: Build
+        run: just build
+      - name: Run unit tests
+        run: just test
+      - name: Run e2e tests
+        run: just test-e2e

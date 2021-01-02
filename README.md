@@ -1,17 +1,24 @@
 # Flow Heater HTTP
 
-## Example
+## Setup
+install sqlx-cli:
+```bash
+cargo install sqlx-cli
+```
 
+Migrations are run automatically, when running the `make fh.http` target.
+
+## Example
 Compile and run the `fh-http` binary with:
 
 ```bash
-cargo run --bin fh-http
+just run
 ```
 
 On another terminal, issue an HTTP request to `localhost:3030/hello/foo`:
 
 ```bash
-$> curl -iX OPTIONS localhost:3030/hello/xxx -d'{"a":"b"}'                                                                                0 < 13:51:42
+$> curl -iX OPTIONS localhost:3030/hello/xxx -d'{"a":"b"}'
 HTTP/1.1 200 OK
 content-type: application/json
 content-length: 123
@@ -22,7 +29,7 @@ date: Sat, 02 Jan 2021 12:52:27 GMT
 
 The `fh-http` process spits out some lines to stdout.
 ```bash
-$> cargo run --bin fh-http                                                                                130 < 13:52:20
+$> cargo run --bin fh-http
    Compiling fh-http v0.1.0 (/home/tim/projects/flow-heater/workspace/fh-http)
     Finished dev [unoptimized + debuginfo] target(s) in 3.75s
      Running `target/debug/fh-http`
