@@ -17,14 +17,13 @@ enum ReqCmd {
 
 async fn request_processor(rx: &mut mpsc::Receiver<ReqCmd>) {
     while let Some(cmd) = rx.recv().await {
-        println!("Got new CMD: {:?}", cmd);
-
+        // println!("Got new CMD: {:?}", cmd);
         match cmd {
             ReqCmd::Http {
                 request: req,
                 cmd_tx: resp_tx,
             } => {
-                let res = process_request(&req).await;
+                let res = process_request(req).await;
                 resp_tx.send(Ok(res)).unwrap();
             }
         }
@@ -37,8 +36,7 @@ pub(crate) fn with_sender(
     warp::any().map(move || tx.clone())
 }
 
-pub fn extract_request(
-) -> impl Filter<Extract = (http::Request<Vec<u8>>,), Error = warp::Rejection> + Copy {
+pub fn extract_request() -> impl Filter<Extract = (Request,), Error = warp::Rejection> + Copy {
     warp::method()
         .and(warp::path::full())
         .and(warp::header::headers_cloned())
@@ -56,7 +54,8 @@ pub fn extract_request(
                 {
                     *req.headers_mut() = headers;
                 }
-                req
+
+                Request::from(req)
             },
         )
 }
@@ -64,20 +63,18 @@ pub fn extract_request(
 async fn hello_handler(
     _name: String,
     tx: ReqSender<ReqCmd>,
-    request: http::Request<Vec<u8>>,
+    request: Request,
 ) -> Result<impl Reply, Rejection> {
     let mut tx2 = tx.lock().unwrap().clone();
     let (resp_tx, resp_rx) = oneshot::channel();
-
-    let req = Request::from(request);
     tx2.send(ReqCmd::Http {
-        request: req,
+        request,
         cmd_tx: resp_tx,
     })
     .await
     .unwrap();
-    let res = resp_rx.await;
-    println!("GOT response: {:?}", res);
+    let _res = resp_rx.await;
+    // println!("GOT response: {:?}", res);
     Ok(warp::reply::reply())
 }
 

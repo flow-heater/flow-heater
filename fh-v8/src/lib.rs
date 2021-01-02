@@ -1,23 +1,20 @@
 // use anyhow::Error;
-// use deno_core::error::AnyError;
+use deno_core::error::AnyError;
 use deno_core::JsRuntime;
-// use deno_core::OpState;
-// use deno_core::ZeroCopyBuf;
-// use serde::{Deserialize, Serialize};
-// use serde_json::Value;
+use deno_core::OpState;
+use deno_core::ZeroCopyBuf;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use warp::http;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Request {
     headers: HashMap<String, String>,
-    body: Vec<u8>,
+    body: String,
     method: String,
     path: String,
     query: String,
-    host: String,
-    port: u16,
-    scheme: String,
 }
 
 #[derive(Debug)]
@@ -25,6 +22,25 @@ pub struct Response {
     code: usize,
     headers: HashMap<String, String>,
     body: Option<Vec<u8>>,
+}
+
+fn op_get_request(
+    state: &mut OpState,
+    _args: Value,
+    _bufs: &mut [ZeroCopyBuf],
+) -> Result<Value, AnyError> {
+    let r = state.borrow::<Request>();
+    Ok(serde_json::json!(r))
+}
+
+fn op_dispatch_request(
+    state: &mut OpState,
+    args: Value,
+    _bufs: &mut [ZeroCopyBuf],
+) -> Result<Value, AnyError> {
+    let r: Request = serde_json::from_value(args).unwrap();
+    state.borrow_mut::<Request>().method = r.method;
+    Ok(serde_json::json!(()))
 }
 
 impl From<http::Request<Vec<u8>>> for Request {
@@ -37,24 +53,43 @@ impl From<http::Request<Vec<u8>>> for Request {
         let (parts, body) = req.into_parts();
 
         Request {
-            body,
+            body: String::from_utf8(body).unwrap(),
             headers,
             method: parts.method.to_string(),
             path: parts.uri.path().to_string(),
             query: parts.uri.query().unwrap_or("").to_string(),
-            host: parts.uri.host().unwrap_or("").to_string(),
-            port: parts.uri.port_u16().unwrap_or(0),
-            scheme: parts.uri.scheme_str().unwrap_or("").to_string(),
         }
     }
 }
 
-pub async fn process_request(_req: &Request) -> Response {
+pub async fn process_request(req: Request) -> Response {
     let mut js_runtime = JsRuntime::new(Default::default());
+
+    js_runtime.register_op(
+        "dispatch_request",
+        deno_core::json_op_sync(op_dispatch_request),
+    );
+
+    js_runtime.register_op("get_request", deno_core::json_op_sync(op_get_request));
+
+    js_runtime.register_op(
+        "op_resources",
+        deno_core::json_op_sync(deno_core::op_resources),
+    );
+
+    js_runtime.op_state().borrow_mut().put::<Request>(req);
+
     js_runtime
-        .execute("asd", "Deno.core.print(`Hello from deno!\n`);")
+        .execute("flow_heater.js", include_str!("flow_heater.js"))
         .unwrap();
+
     js_runtime.run_event_loop().await.unwrap();
+
+    // extract the request
+    let state = js_runtime.op_state();
+    let op_state = state.borrow();
+    let modified_req = op_state.borrow::<Request>();
+    println!("Modified req: {:?}", modified_req);
 
     Response {
         code: 200,
