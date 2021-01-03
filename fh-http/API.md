@@ -18,13 +18,6 @@
 ```
 
 ### Endpoints
-**Get Request Processor**
-
-*Fetches information for an existing request processor*
-
-- Request: `GET /admin/processor/{processor_id}`
-- Response: Request Processor Object
-
 **Create Request Processor**
 
 *Creates a new request processor and returns the object including a newly created UUID*
@@ -52,6 +45,13 @@
         "code": "code goes here..."
     }
     ```
+
+**Get Request Processor**
+
+*Fetches information for an existing request processor*
+
+- Request: `GET /admin/processor/{processor_id}`
+- Response: Request Processor Object
 
 **Update Request Processor**
 
