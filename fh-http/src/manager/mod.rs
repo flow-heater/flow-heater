@@ -1,7 +1,7 @@
 use self::request_processor::RequestProcessor;
 use anyhow::{Context, Result};
 use fh_v8::{process_request, Request, Response};
-use sqlx::SqlitePool;
+use sqlx::{Pool, SqlitePool};
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, oneshot};
@@ -40,60 +40,66 @@ pub(crate) enum ReqCmd {
 pub(crate) async fn request_manager(
     rx: &mut mpsc::Receiver<ReqCmd>,
 ) -> anyhow::Result<()> {
-    let pool = SqlitePool::connect(&env::var("DATABASE_URL").unwrap())
+    let pool = SqlitePool::connect(&env::var("DATABASE_URL")?)
         .await
         .context("Connection to DB failed")?;
 
     while let Some(cmd) = rx.recv().await {
         // println!("Got new CMD: {:?}", cmd);
-        match cmd {
-            ReqCmd::Http {
-                request: req,
-                cmd_tx,
-            } => {
-                let res = process_request(req).await;
-                cmd_tx.send(Ok(res)).unwrap();
-            }
-            ReqCmd::CreateRequestProcessor {
-                proc: processor,
-                cmd_tx,
-            } => {
-                self::request_processor::create_request_processor(
-                    &mut pool.acquire().await?,
-                    &processor,
-                )
-                .await?;
-                cmd_tx.send(Ok(processor)).unwrap();
-            }
-            ReqCmd::GetRequestProcessor { id, cmd_tx } => {
-                let p = self::request_processor::get_request_processor(
-                    &mut pool.acquire().await?,
-                    &id,
-                )
-                .await?;
-                cmd_tx.send(Ok(p)).unwrap();
-            }
-            ReqCmd::UpdateRequestProcessor {
-                id,
-                proc: processor,
-                cmd_tx,
-            } => {
-                self::request_processor::update_request_processor(
-                    &mut pool.acquire().await?,
-                    &id,
-                    &processor,
-                )
-                .await?;
-                cmd_tx.send(Ok(processor)).unwrap();
-            }
-            ReqCmd::DeleteRequestProcessor { id, cmd_tx } => {
-                let p = self::request_processor::delete_request_processor(
-                    &mut pool.acquire().await?,
-                    &id,
-                )
-                .await?;
-                cmd_tx.send(Ok(p)).unwrap();
-            }
+        process_command(cmd, &pool).await?;
+    }
+
+    Ok(())
+}
+
+async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
+    match cmd {
+        ReqCmd::Http {
+            request: req,
+            cmd_tx,
+        } => {
+            let res = process_request(req).await;
+            cmd_tx.send(Ok(res)).unwrap();
+        }
+        ReqCmd::CreateRequestProcessor {
+            proc: processor,
+            cmd_tx,
+        } => {
+            self::request_processor::create_request_processor(
+                &mut pool.acquire().await?,
+                &processor,
+            )
+            .await?;
+            cmd_tx.send(Ok(processor)).unwrap();
+        }
+        ReqCmd::GetRequestProcessor { id, cmd_tx } => {
+            let p = self::request_processor::get_request_processor(
+                &mut pool.acquire().await?,
+                &id,
+            )
+            .await?;
+            cmd_tx.send(Ok(p)).unwrap();
+        }
+        ReqCmd::UpdateRequestProcessor {
+            id,
+            proc: mut processor,
+            cmd_tx,
+        } => {
+            self::request_processor::update_request_processor(
+                &mut pool.acquire().await?,
+                &id,
+                &mut processor,
+            )
+            .await?;
+            cmd_tx.send(Ok(processor)).unwrap();
+        }
+        ReqCmd::DeleteRequestProcessor { id, cmd_tx } => {
+            let p = self::request_processor::delete_request_processor(
+                &mut pool.acquire().await?,
+                &id,
+            )
+            .await?;
+            cmd_tx.send(Ok(p)).unwrap();
         }
     }
 

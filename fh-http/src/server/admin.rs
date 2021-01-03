@@ -18,7 +18,7 @@ pub(crate) mod filters {
         tx: ReqSender<ReqCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
     {
-        warp::path!("admin" / "processors")
+        warp::path!("admin" / "processor")
             .and(with_sender(tx))
             .and(warp::post())
             .and(warp::body::json())
@@ -29,7 +29,7 @@ pub(crate) mod filters {
         tx: ReqSender<ReqCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
     {
-        warp::path!("admin" / "processors" / Uuid)
+        warp::path!("admin" / "processor" / Uuid)
             .and(with_sender(tx))
             .and(warp::get())
             .and_then(super::handlers::get_processor)
@@ -39,7 +39,7 @@ pub(crate) mod filters {
         tx: ReqSender<ReqCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
     {
-        warp::path!("admin" / "processors" / Uuid)
+        warp::path!("admin" / "processor" / Uuid)
             .and(with_sender(tx))
             .and(warp::put())
             .and(warp::body::json())
@@ -50,7 +50,7 @@ pub(crate) mod filters {
         tx: ReqSender<ReqCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
     {
-        warp::path!("admin" / "processors" / Uuid)
+        warp::path!("admin" / "processor" / Uuid)
             .and(with_sender(tx))
             .and(warp::delete())
             .and_then(super::handlers::delete_processor)
@@ -111,9 +111,9 @@ pub(crate) mod handlers {
         })
         .await
         .unwrap();
-        let _res = resp_rx.await.unwrap().unwrap();
+        let res = resp_rx.await.unwrap().unwrap();
 
-        Ok(warp::reply::json(&processor))
+        Ok(warp::reply::json(&res))
     }
 
     pub(crate) async fn delete_processor(
@@ -133,3 +133,34 @@ pub(crate) mod handlers {
         Ok(warp::reply())
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use warp::http::StatusCode;
+//     use warp::test::request;
+//     use crate::manager::request_processor::RequestProcessor;
+
+//     use super::{
+//         filters,
+//     };
+
+//     #[tokio::test]
+//     async fn test_post() {
+//         let tx =
+//         let api = filters::admin_filters(tx);
+
+//         let resp = request()
+//             .method("POST")
+//             .path("/admin/processors")
+//             .json(&RequestProcessor{
+//                 id: "",
+//                 name: "test-proc",
+//                 language: "js",
+//                 runtime: "v8",
+//                 code: "bla"
+//             })
+//             .reply(&api)
+//             .await;
+
+//         assert_eq!(resp.status(), StatusCode::CREATED);
+//     }

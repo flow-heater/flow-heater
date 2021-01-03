@@ -60,7 +60,7 @@ pub(crate) async fn get_request_processor(
 pub(crate) async fn update_request_processor(
     conn: &mut PoolConnection<Sqlite>,
     id: &Uuid,
-    data: &RequestProcessor,
+    data: &mut RequestProcessor,
 ) -> Result<()> {
     let _ = get_request_processor(conn, id).await?;
     let id_str = id.to_string();
@@ -76,6 +76,8 @@ pub(crate) async fn update_request_processor(
     )
     .execute(conn)
     .await?;
+
+    data.id = *id;
 
     Ok(())
 }
