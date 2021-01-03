@@ -6,7 +6,7 @@ install sqlx-cli:
 cargo install sqlx-cli
 ```
 
-Migrations are run automatically, when running the `make fh.http` target.
+Migrations are run automatically, when running the `just run` target.
 
 ## Example
 Compile and run the `fh-http` binary with:

@@ -1,9 +1,9 @@
 pub(crate) mod admin;
-pub(crate) mod request_processor;
+pub(crate) mod public;
 
 use crate::manager::{ReqCmd, ReqSender};
 use crate::server::admin::filters::admin_filters;
-use crate::server::request_processor::filters::request_filters;
+use crate::server::public::filters::public_filters;
 use warp::Filter;
 
 pub(crate) fn with_sender(
@@ -13,7 +13,7 @@ pub(crate) fn with_sender(
 }
 
 pub(crate) async fn web_server(tx: ReqSender<ReqCmd>) {
-    warp::serve(request_filters(tx.clone()).or(admin_filters(tx.clone())))
+    warp::serve(public_filters(tx.clone()).or(admin_filters(tx.clone())))
         .run(([127, 0, 0, 1], 3030))
         .await
 }

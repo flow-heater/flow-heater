@@ -4,7 +4,7 @@ pub(crate) mod filters {
     use fh_v8::Request;
     use warp::{http, Filter};
 
-    pub(crate) fn request_filters(
+    pub(crate) fn public_filters(
         tx: ReqSender<ReqCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         process_request(tx.clone())
