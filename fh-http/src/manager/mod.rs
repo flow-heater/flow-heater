@@ -1,6 +1,7 @@
-use crate::server::admin::{RequestProcessorReq, RequestProcessorResp};
-use anyhow::Result;
+use self::request_processor::RequestProcessor;
+use anyhow::{Context, Result};
 use fh_v8::{process_request, Request, Response};
+use sqlx::SqlitePool;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, oneshot};
@@ -9,6 +10,8 @@ use uuid::Uuid;
 type Responder<T> = oneshot::Sender<T>;
 pub(crate) type ReqSender<T> = Arc<Mutex<mpsc::Sender<T>>>;
 
+pub(crate) mod request_processor;
+
 #[derive(Debug)]
 pub(crate) enum ReqCmd {
     Http {
@@ -16,17 +19,30 @@ pub(crate) enum ReqCmd {
         cmd_tx: Responder<Result<Response>>,
     },
     CreateRequestProcessor {
-        proc: RequestProcessorReq,
-        cmd_tx: Responder<Result<RequestProcessorResp>>,
+        proc: RequestProcessor,
+        cmd_tx: Responder<Result<RequestProcessor>>,
+    },
+    GetRequestProcessor {
+        id: Uuid,
+        cmd_tx: Responder<Result<RequestProcessor>>,
+    },
+    UpdateRequestProcessor {
+        id: Uuid,
+        proc: RequestProcessor,
+        cmd_tx: Responder<Result<RequestProcessor>>,
+    },
+    DeleteRequestProcessor {
+        id: Uuid,
+        cmd_tx: Responder<Result<()>>,
     },
 }
 
-use sqlx::SqlitePool;
-
-pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) {
+pub(crate) async fn request_manager(
+    rx: &mut mpsc::Receiver<ReqCmd>,
+) -> anyhow::Result<()> {
     let pool = SqlitePool::connect(&env::var("DATABASE_URL").unwrap())
         .await
-        .unwrap();
+        .context("Connection to DB failed")?;
 
     while let Some(cmd) = rx.recv().await {
         // println!("Got new CMD: {:?}", cmd);
@@ -42,33 +58,44 @@ pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) {
                 proc: processor,
                 cmd_tx,
             } => {
-                //TODO: refactor :)
-                let mut conn = pool.acquire().await.unwrap();
-                let id = Uuid::new_v4();
-                let id_str = id.to_string();
-                sqlx::query!(
-                    r#"INSERT INTO request_processor (id, name, language, runtime, code)
-                VALUES (?1, ?2, ?3, ?4, ?5)"#,
-                    id_str,
-                    processor.name,
-                    processor.language,
-                    processor.runtime,
-                    processor.code
+                self::request_processor::create_request_processor(
+                    &mut pool.acquire().await?,
+                    &processor,
                 )
-                .execute(&mut conn)
-                .await
-                .unwrap();
-
-                cmd_tx
-                    .send(Ok(RequestProcessorResp {
-                        id,
-                        name: processor.name,
-                        language: processor.language,
-                        runtime: processor.runtime,
-                        code: processor.code,
-                    }))
-                    .unwrap();
+                .await?;
+                cmd_tx.send(Ok(processor)).unwrap();
+            }
+            ReqCmd::GetRequestProcessor { id, cmd_tx } => {
+                let p = self::request_processor::get_request_processor(
+                    &mut pool.acquire().await?,
+                    &id,
+                )
+                .await?;
+                cmd_tx.send(Ok(p)).unwrap();
+            }
+            ReqCmd::UpdateRequestProcessor {
+                id,
+                proc: processor,
+                cmd_tx,
+            } => {
+                self::request_processor::update_request_processor(
+                    &mut pool.acquire().await?,
+                    &id,
+                    &processor,
+                )
+                .await?;
+                cmd_tx.send(Ok(processor)).unwrap();
+            }
+            ReqCmd::DeleteRequestProcessor { id, cmd_tx } => {
+                let p = self::request_processor::delete_request_processor(
+                    &mut pool.acquire().await?,
+                    &id,
+                )
+                .await?;
+                cmd_tx.send(Ok(p)).unwrap();
             }
         }
     }
+
+    Ok(())
 }
