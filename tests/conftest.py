@@ -6,14 +6,14 @@ from lovely.testlayers.server import ServerLayer
 
 class FlowHeaterLayer(ServerLayer):
     def __init__(self):
-        stdout = tempfile.NamedTemporaryFile()
-        stderr = tempfile.NamedTemporaryFile()
+        stdout = tempfile.NamedTemporaryFile(mode="w+")
+        stderr = tempfile.NamedTemporaryFile(mode="w+")
         super(FlowHeaterLayer, self).__init__(
             name="fh-http",
             servers=["localhost:3030"],
             start_cmd="cargo run --bin fh-http",
-            stdout=stdout.name,
-            stderr=stderr.name,
+            stdout=stdout,
+            stderr=stderr,
         )
 
 
