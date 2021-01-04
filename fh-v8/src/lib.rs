@@ -62,7 +62,7 @@ impl From<http::Request<Vec<u8>>> for Request {
     }
 }
 
-pub async fn process_request(req: Request) -> Response {
+pub async fn process_request(req: Request, code: Option<String>) -> Response {
     let mut js_runtime = JsRuntime::new(Default::default());
 
     js_runtime.register_op(
@@ -79,9 +79,13 @@ pub async fn process_request(req: Request) -> Response {
 
     js_runtime.op_state().borrow_mut().put::<Request>(req);
 
-    js_runtime
-        .execute("flow_heater.js", include_str!("flow_heater.js"))
-        .unwrap();
+    if let Some(c) = code {
+        js_runtime.execute("custom_code.js", &c).unwrap();
+    } else {
+        js_runtime
+            .execute("flow_heater.js", include_str!("flow_heater.js"))
+            .unwrap();
+    }
 
     js_runtime.run_event_loop().await.unwrap();
 

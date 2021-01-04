@@ -1,4 +1,5 @@
 use anyhow::Result;
+use fh_v8::{process_request, Request, Response};
 use serde::{self, Deserialize, Serialize};
 use sqlx::{pool::PoolConnection, Sqlite};
 use std::convert::AsRef;
@@ -114,4 +115,15 @@ pub(crate) async fn delete_request_processor(
     .await?;
 
     Ok(())
+}
+
+pub(crate) async fn run_request_processor(
+    conn: &mut PoolConnection<Sqlite>,
+    id: &Uuid,
+    request: Request,
+) -> Result<Response> {
+    let p = get_request_processor(conn, id).await?;
+    let res = process_request(request, Some(p.code)).await;
+
+    Ok(res)
 }

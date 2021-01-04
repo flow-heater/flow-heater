@@ -115,3 +115,29 @@ def test_delete_admin_processor(fh_http: ServerLayer):
     # TODO: error cases do not work yet ;)
     # response_get = requests.get(f"http://localhost:3030/admin/processor/{rp_id}")
     # assert 404 == response_get.status_code
+
+
+def test_run_processor(fh_http: ServerLayer):
+    code = """
+    // invoke ops
+    Deno.core.ops();
+    Deno.core.print(`Hello from DENO\n`);
+    """
+
+    rp = RequestProcessor(
+        id=None, name="testing", runtime="v8", language="javascript", code=code,
+    )
+
+    response = create_request_processor(rp)
+    rp_id = response.json()["id"]
+
+    response_run = requests.post(f"http://localhost:3030/processor/{rp_id}/run")
+    data = response_run.json()
+
+    assert 200 == response_run.status_code
+
+    # Check STDOUT
+    fh_http.stdout.seek(0)
+    stdout = fh_http.stdout.read()
+    assert "Hello from DENO" in stdout
+    assert "RUST: modified request is" in stdout
