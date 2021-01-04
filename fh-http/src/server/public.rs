@@ -55,7 +55,10 @@ pub(crate) mod filters {
 }
 
 pub(crate) mod handlers {
-    use crate::manager::{ReqCmd, ReqSender};
+    use crate::{
+        manager::{ReqCmd, ReqSender},
+        server::{FhHttpError, FhLockingError},
+    };
     use fh_v8::Request;
     use tokio::sync::oneshot;
     use uuid::Uuid;
@@ -66,7 +69,11 @@ pub(crate) mod handlers {
         tx: ReqSender<ReqCmd>,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let mut tx2 = tx.lock().unwrap().clone();
+        let mut tx2 = tx
+            .lock()
+            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
+            .clone();
+
         let (cmd_tx, cmd_rx) = oneshot::channel();
         tx2.send(ReqCmd::RunRequestProcessor {
             id,
@@ -74,9 +81,13 @@ pub(crate) mod handlers {
             cmd_tx,
         })
         .await
-        .unwrap();
+        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
-        let res = cmd_rx.await.unwrap().unwrap();
+        let res = cmd_rx
+            .await
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
         Ok(warp::reply::json(&res))
     }
 
@@ -85,16 +96,20 @@ pub(crate) mod handlers {
         tx: ReqSender<ReqCmd>,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let mut tx2 = tx.lock().unwrap().clone();
+        let mut tx2 = tx
+            .lock()
+            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
+            .clone();
+
         let (resp_tx, resp_rx) = oneshot::channel();
         tx2.send(ReqCmd::Http {
             request,
             cmd_tx: resp_tx,
         })
         .await
-        .unwrap();
-        let res = resp_rx.await.unwrap().unwrap();
-        // println!("GOT response: {:?}", res);
+        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
+        let res = resp_rx.await.unwrap();
         Ok(warp::reply::json(&res))
     }
 }

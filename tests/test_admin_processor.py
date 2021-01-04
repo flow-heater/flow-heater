@@ -112,9 +112,9 @@ def test_delete_admin_processor(fh_http: ServerLayer):
     response_delete = requests.delete(f"http://localhost:3030/admin/processor/{rp_id}")
     assert 200 == response_delete.status_code
 
-    # TODO: error cases do not work yet ;)
-    # response_get = requests.get(f"http://localhost:3030/admin/processor/{rp_id}")
-    # assert 404 == response_get.status_code
+    # check if it's really gone
+    response_get = requests.get(f"http://localhost:3030/admin/processor/{rp_id}")
+    assert 404 == response_get.status_code
 
 
 def test_run_processor(fh_http: ServerLayer):
@@ -141,3 +141,17 @@ def test_run_processor(fh_http: ServerLayer):
     stdout = fh_http.stdout.read()
     assert "Hello from DENO" in stdout
     assert "RUST: modified request is" in stdout
+
+
+def test_not_found_processor(fh_http: ServerLayer):
+    id = "8a2e00e9-c710-4337-b717-bdcad0396df5"
+    assert 404 == requests.post(f"http://localhost:3030/processor/{id}/run").status_code
+    assert (
+        404 == requests.get(f"http://localhost:3030/admin/processor/{id}").status_code
+    )
+    resp = requests.delete(f"http://localhost:3030/admin/processor/{id}")
+    data = resp.json()
+
+    assert 404 == resp.status_code
+    assert data["code"] == 404
+    assert f"with id {id} not found" in data["message"]

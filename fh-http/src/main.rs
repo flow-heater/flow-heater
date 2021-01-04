@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 async fn main() -> Result<()> {
     dotenv()?;
 
-    // TODO: is 4096 enough? make this configurable
+    // TODO is 4096 enough? make this configurable!
     let (tx, mut rx) = mpsc::channel(4096);
     let (_web_server, req_manager) = tokio::join!(
         web_server(Arc::new(Mutex::new(tx))),

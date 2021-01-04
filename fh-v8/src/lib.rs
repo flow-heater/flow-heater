@@ -24,6 +24,12 @@ pub struct Response {
     body: Option<Vec<u8>>,
 }
 
+impl Response {
+    pub fn error_msg(reason: &str, r: Self) -> anyhow::Error {
+        anyhow::Error::msg(format!("{}: {:?}", reason, r))
+    }
+}
+
 fn op_get_request(
     state: &mut OpState,
     _args: Value,

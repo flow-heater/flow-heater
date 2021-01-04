@@ -55,39 +55,56 @@ pub(crate) mod filters {
 pub(crate) mod handlers {
     use crate::manager::request_processor::RequestProcessor;
     use crate::manager::{ReqCmd, ReqSender};
+    use crate::server::{FhHttpError, FhLockingError};
     use tokio::sync::oneshot;
     use uuid::Uuid;
 
     pub(crate) async fn create_processor(
         tx: ReqSender<ReqCmd>,
         processor: RequestProcessor,
-    ) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let mut tx2 = tx.lock().unwrap().clone();
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut tx2 = tx
+            .lock()
+            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
+            .clone();
+
         let (resp_tx, resp_rx) = oneshot::channel();
         tx2.send(ReqCmd::CreateRequestProcessor {
             proc: processor.clone(),
             cmd_tx: resp_tx,
         })
         .await
-        .unwrap();
-        let _res = resp_rx.await.unwrap().unwrap();
+        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
-        Ok(warp::reply::json(&processor))
+        let res = resp_rx
+            .await
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
+        Ok(warp::reply::json(&res))
     }
 
     pub(crate) async fn get_processor(
         id: Uuid,
         tx: ReqSender<ReqCmd>,
-    ) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let mut tx2 = tx.lock().unwrap().clone();
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut tx2 = tx
+            .lock()
+            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
+            .clone();
+
         let (resp_tx, resp_rx) = oneshot::channel();
         tx2.send(ReqCmd::GetRequestProcessor {
             id,
             cmd_tx: resp_tx,
         })
         .await
-        .unwrap();
-        let proc = resp_rx.await.unwrap().unwrap();
+        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
+        let proc = resp_rx
+            .await
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
         Ok(warp::reply::json(&proc))
     }
@@ -96,8 +113,12 @@ pub(crate) mod handlers {
         id: Uuid,
         tx: ReqSender<ReqCmd>,
         processor: RequestProcessor,
-    ) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let mut tx2 = tx.lock().unwrap().clone();
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut tx2 = tx
+            .lock()
+            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
+            .clone();
+
         let (resp_tx, resp_rx) = oneshot::channel();
         tx2.send(ReqCmd::UpdateRequestProcessor {
             id,
@@ -105,8 +126,12 @@ pub(crate) mod handlers {
             cmd_tx: resp_tx,
         })
         .await
-        .unwrap();
-        let res = resp_rx.await.unwrap().unwrap();
+        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
+        let res = resp_rx
+            .await
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
         Ok(warp::reply::json(&res))
     }
@@ -114,48 +139,25 @@ pub(crate) mod handlers {
     pub(crate) async fn delete_processor(
         id: Uuid,
         tx: ReqSender<ReqCmd>,
-    ) -> Result<impl warp::Reply, std::convert::Infallible> {
-        let mut tx2 = tx.lock().unwrap().clone();
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut tx2 = tx
+            .lock()
+            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
+            .clone();
+
         let (resp_tx, resp_rx) = oneshot::channel();
         tx2.send(ReqCmd::DeleteRequestProcessor {
             id,
             cmd_tx: resp_tx,
         })
         .await
-        .unwrap();
-        let _res = resp_rx.await.unwrap().unwrap();
+        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
+        let _res = resp_rx
+            .await
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
         Ok(warp::reply())
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use warp::http::StatusCode;
-//     use warp::test::request;
-//     use crate::manager::request_processor::RequestProcessor;
-
-//     use super::{
-//         filters,
-//     };
-
-//     #[tokio::test]
-//     async fn test_post() {
-//         let tx =
-//         let api = filters::admin_filters(tx);
-
-//         let resp = request()
-//             .method("POST")
-//             .path("/admin/processors")
-//             .json(&RequestProcessor{
-//                 id: "",
-//                 name: "test-proc",
-//                 language: "js",
-//                 runtime: "v8",
-//                 code: "bla"
-//             })
-//             .reply(&api)
-//             .await;
-
-//         assert_eq!(resp.status(), StatusCode::CREATED);
-//     }
