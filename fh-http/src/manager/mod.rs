@@ -61,7 +61,7 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
             cmd_tx,
         } => {
             let res = process_request(req, None).await;
-            cmd_tx.send(Ok(res)).unwrap();
+            cmd_tx.send(res).unwrap();
         }
         ReqCmd::CreateRequestProcessor {
             proc: processor,

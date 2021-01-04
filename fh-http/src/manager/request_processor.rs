@@ -123,7 +123,5 @@ pub(crate) async fn run_request_processor(
     request: Request,
 ) -> Result<Response> {
     let p = get_request_processor(conn, id).await?;
-    let res = process_request(request, Some(p.code)).await;
-
-    Ok(res)
+    process_request(request, Some(p.code)).await
 }
