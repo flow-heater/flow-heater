@@ -1,5 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import Optional
+from enum import Enum
 
 import requests
 from requests import Response
@@ -29,15 +30,29 @@ def create_request_processor(rp: RequestProcessor) -> Response:
 
 
 def test_create_admin_processor(fh_http: ServerLayer):
-    rp = RequestProcessor(id=None, name="testing", runtime="v8", language="js", code="my fun code")
-    rp2 = RequestProcessor(id=None, name="testing2", runtime="v8", language="js", code="my fun code2")
+    rp = RequestProcessor(
+        id=None, name="testing", runtime="v8", language="javascript", code="my fun code"
+    )
+    rp2 = RequestProcessor(
+        id=None,
+        name="testing2",
+        runtime="wasm",
+        language="typescript",
+        code="my fun code2",
+    )
 
     create_request_processor(rp)
     create_request_processor(rp2)
 
 
 def test_get_admin_processor(fh_http: ServerLayer):
-    rp = RequestProcessor(id=None, name="testing-get", runtime="v8", language="js", code="my fun code")
+    rp = RequestProcessor(
+        id=None,
+        name="testing-get",
+        runtime="v8",
+        language="javascript",
+        code="my fun code",
+    )
     response = create_request_processor(rp)
     data = response.json()
 
@@ -52,14 +67,18 @@ def test_get_admin_processor(fh_http: ServerLayer):
 
 
 def test_update_admin_processor(fh_http: ServerLayer):
-    rp = RequestProcessor(id=None, name="testing", runtime="v8", language="js", code="my fun code")
+    rp = RequestProcessor(
+        id=None, name="testing", runtime="v8", language="javascript", code="my fun code"
+    )
     response = create_request_processor(rp)
     data = response.json()
 
     rp.name = "testing-update"
     rp.code = "updated code"
 
-    response_update = requests.put(f"http://localhost:3030/admin/processor/{data['id']}", json=asdict(rp))
+    response_update = requests.put(
+        f"http://localhost:3030/admin/processor/{data['id']}", json=asdict(rp)
+    )
     data_update = response_update.json()
 
     assert data["id"] == data_update["id"]
@@ -79,7 +98,13 @@ def test_update_admin_processor(fh_http: ServerLayer):
 
 
 def test_delete_admin_processor(fh_http: ServerLayer):
-    rp = RequestProcessor(id=None, name="testing", runtime="v8", language="js", code="my fun code")
+    rp = RequestProcessor(
+        id=None,
+        name="testing",
+        runtime="wasm",
+        language="typescript",
+        code="my fun code",
+    )
 
     response = create_request_processor(rp)
     rp_id = response.json()["id"]

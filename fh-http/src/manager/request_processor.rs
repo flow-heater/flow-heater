@@ -1,7 +1,9 @@
 use anyhow::Result;
 use serde::{self, Deserialize, Serialize};
 use sqlx::{pool::PoolConnection, Sqlite};
+use std::convert::AsRef;
 use std::str::FromStr;
+use strum_macros::{self, AsRefStr, EnumString};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,9 +12,23 @@ pub(crate) struct RequestProcessor {
     #[serde(default = "Uuid::new_v4")]
     pub(crate) id: Uuid,
     pub(crate) name: String,
-    pub(crate) language: String,
-    pub(crate) runtime: String,
+    pub(crate) language: RequestProcessorLanguage,
+    pub(crate) runtime: RequestProcessorRuntime,
     pub(crate) code: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, AsRefStr, EnumString)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RequestProcessorLanguage {
+    Javascript,
+    Typescript,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, AsRefStr, EnumString)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RequestProcessorRuntime {
+    V8,
+    WASM,
 }
 
 pub(crate) async fn create_request_processor(
@@ -20,14 +36,16 @@ pub(crate) async fn create_request_processor(
     data: &RequestProcessor,
 ) -> Result<()> {
     let id_str = data.id.to_string();
+    let language = data.language.as_ref();
+    let runtime = data.runtime.as_ref();
     sqlx::query!(
         r#"INSERT INTO request_processor
                     (id, name, language, runtime, code)
                     VALUES (?1, ?2, ?3, ?4, ?5)"#,
         id_str,
         data.name,
-        data.language,
-        data.runtime,
+        language,
+        runtime,
         data.code
     )
     .execute(conn)
@@ -51,8 +69,8 @@ pub(crate) async fn get_request_processor(
     Ok(RequestProcessor {
         id: Uuid::from_str(&row.id)?,
         name: row.name,
-        language: row.language,
-        runtime: row.runtime,
+        language: RequestProcessorLanguage::from_str(&row.language)?,
+        runtime: RequestProcessorRuntime::from_str(&row.runtime)?,
         code: row.code,
     })
 }
@@ -64,13 +82,15 @@ pub(crate) async fn update_request_processor(
 ) -> Result<()> {
     let _ = get_request_processor(conn, id).await?;
     let id_str = id.to_string();
+    let language = data.language.as_ref();
+    let runtime = data.runtime.as_ref();
     sqlx::query!(
         r#"UPDATE request_processor
            SET name=?1, language=?2, runtime=?3, code=?4
            WHERE id=?5"#,
         data.name,
-        data.language,
-        data.runtime,
+        language,
+        runtime,
         data.code,
         id_str,
     )
