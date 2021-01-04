@@ -35,6 +35,11 @@ pub(crate) enum ReqCmd {
         id: Uuid,
         cmd_tx: Responder<Result<()>>,
     },
+    RunRequestProcessor {
+        id: Uuid,
+        request: Request,
+        cmd_tx: Responder<Result<Response>>,
+    },
 }
 
 pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
@@ -43,7 +48,6 @@ pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::
         .context("Connection to DB failed")?;
 
     while let Some(cmd) = rx.recv().await {
-        // println!("Got new CMD: {:?}", cmd);
         process_command(cmd, &pool).await?;
     }
 
@@ -56,7 +60,7 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
             request: req,
             cmd_tx,
         } => {
-            let res = process_request(req).await;
+            let res = process_request(req, None).await;
             cmd_tx.send(Ok(res)).unwrap();
         }
         ReqCmd::CreateRequestProcessor {
@@ -93,6 +97,19 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
                 self::request_processor::delete_request_processor(&mut pool.acquire().await?, &id)
                     .await?;
             cmd_tx.send(Ok(p)).unwrap();
+        }
+        ReqCmd::RunRequestProcessor {
+            id,
+            request,
+            cmd_tx,
+        } => {
+            let r = self::request_processor::run_request_processor(
+                &mut pool.acquire().await?,
+                &id,
+                request,
+            )
+            .await?;
+            cmd_tx.send(Ok(r)).unwrap();
         }
     }
 

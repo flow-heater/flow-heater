@@ -1,11 +1,6 @@
 # API spec for fh-http
 
-## Authentication
-- TODO
-
-## Admin endpoints
-
-### Request Processor Object
+## Request Processor Object
 
 ```json
 {
@@ -17,6 +12,18 @@
 }
 ```
 
+## Public endpoints
+**Run Request Processor**
+
+*Runs a previously stored request processor*
+
+- Request: `GET|POST|PUT|PATCH|DELETE|... /processor/{processor_id}/run`
+- Response: TBD
+
+## Admin endpoints
+
+### Authentication
+- TODO
 ### Endpoints
 **Create Request Processor**
 
