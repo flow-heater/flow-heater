@@ -6,8 +6,7 @@ pub(crate) mod filters {
 
     pub(crate) fn admin_filters(
         tx: ReqSender<ReqCmd>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-    {
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         create_processor(tx.clone())
             .or(get_processor(tx.clone()))
             .or(update_processor(tx.clone()))
@@ -16,8 +15,7 @@ pub(crate) mod filters {
 
     pub(crate) fn create_processor(
         tx: ReqSender<ReqCmd>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-    {
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor")
             .and(with_sender(tx))
             .and(warp::post())
@@ -27,8 +25,7 @@ pub(crate) mod filters {
 
     pub(crate) fn get_processor(
         tx: ReqSender<ReqCmd>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-    {
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
             .and(with_sender(tx))
             .and(warp::get())
@@ -37,8 +34,7 @@ pub(crate) mod filters {
 
     pub(crate) fn update_processor(
         tx: ReqSender<ReqCmd>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-    {
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
             .and(with_sender(tx))
             .and(warp::put())
@@ -48,8 +44,7 @@ pub(crate) mod filters {
 
     pub(crate) fn delete_processor(
         tx: ReqSender<ReqCmd>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-    {
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
             .and(with_sender(tx))
             .and(warp::delete())

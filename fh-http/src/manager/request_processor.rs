@@ -59,12 +59,9 @@ pub(crate) async fn get_request_processor(
     id: &Uuid,
 ) -> Result<RequestProcessor> {
     let id_str = id.to_string();
-    let row = sqlx::query!(
-        r#"SELECT * FROM request_processor WHERE id = ?1"#,
-        id_str
-    )
-    .fetch_one(conn)
-    .await?;
+    let row = sqlx::query!(r#"SELECT * FROM request_processor WHERE id = ?1"#, id_str)
+        .fetch_one(conn)
+        .await?;
 
     Ok(RequestProcessor {
         id: Uuid::from_str(&row.id)?,
