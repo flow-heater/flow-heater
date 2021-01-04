@@ -37,9 +37,7 @@ pub(crate) enum ReqCmd {
     },
 }
 
-pub(crate) async fn request_manager(
-    rx: &mut mpsc::Receiver<ReqCmd>,
-) -> anyhow::Result<()> {
+pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
     let pool = SqlitePool::connect(&env::var("DATABASE_URL")?)
         .await
         .context("Connection to DB failed")?;
@@ -73,11 +71,8 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
             cmd_tx.send(Ok(processor)).unwrap();
         }
         ReqCmd::GetRequestProcessor { id, cmd_tx } => {
-            let p = self::request_processor::get_request_processor(
-                &mut pool.acquire().await?,
-                &id,
-            )
-            .await?;
+            let p = self::request_processor::get_request_processor(&mut pool.acquire().await?, &id)
+                .await?;
             cmd_tx.send(Ok(p)).unwrap();
         }
         ReqCmd::UpdateRequestProcessor {
@@ -94,11 +89,9 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
             cmd_tx.send(Ok(processor)).unwrap();
         }
         ReqCmd::DeleteRequestProcessor { id, cmd_tx } => {
-            let p = self::request_processor::delete_request_processor(
-                &mut pool.acquire().await?,
-                &id,
-            )
-            .await?;
+            let p =
+                self::request_processor::delete_request_processor(&mut pool.acquire().await?, &id)
+                    .await?;
             cmd_tx.send(Ok(p)).unwrap();
         }
     }
