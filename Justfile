@@ -1,7 +1,16 @@
+export RUST_BACKTRACE := "1"
+
+dotenv:
+    [ -f .env ] && echo "Will not overwrite existing .env file ..." || cp .env.example .env
+
+db: dotenv
+    sqlx db create
+    sqlx migrate run
+
 build:
     cargo build --verbose
 
-run:
+run: dotenv db
     cargo run --bin fh-http
 
 test:

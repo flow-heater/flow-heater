@@ -1,5 +1,6 @@
 # Rust
 /target
+.env
 
 # Python
 __pycache__
@@ -7,3 +8,6 @@ __pycache__
 
 # IDEs
 .idea
+
+# sqlite
+fh-http.db*
