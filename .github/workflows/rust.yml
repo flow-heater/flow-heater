@@ -24,6 +24,14 @@ jobs:
           profile: minimal
           toolchain: stable
       - uses: Swatinem/rust-cache@v1
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
 
       # Setup Just command runner.
       - name: Setup Just
@@ -45,7 +53,7 @@ jobs:
 
       # Setup sqlx and run db migrations
       - name: Install sqlx cli
-        run: cargo install sqlx-cli
+        run: "[-f ~/.cargo/bin/sqlx] || cargo install sqlx-cli"
       - name: Create DB and run migrations
         run: just db
 
