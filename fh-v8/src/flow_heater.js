@@ -1,7 +1,12 @@
 
 
-async function dispatch_request(request) {
-    await Deno.core.jsonOpAsync("dispatch_request", request);
+async function dispatch_request(url, request) {
+    const spec = {
+        "url": url,
+        "request": request
+    };
+
+    await Deno.core.jsonOpAsync("dispatch_request", spec);
 }
 
 async function main() {
@@ -16,9 +21,8 @@ async function main() {
     request.body = "this is the patched body";
     request.headers['content-type'] = 'application/json';
 
-    await dispatch_request(request);
-    await dispatch_request(request);
-    await dispatch_request(request);
+    await dispatch_request("http://httpbin.org/anything", request);
+    await dispatch_request("http://httpbin.org/anything", request);
 }
 
 main();

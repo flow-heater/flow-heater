@@ -3,8 +3,10 @@ use deno_core::JsRuntime;
 use deno_core::OpState;
 use deno_core::ZeroCopyBuf;
 use deno_core::{error::AnyError, BufVec};
+use reqwest::{header, Method, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::str::FromStr;
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -12,6 +14,12 @@ use std::{
     rc::Rc,
 };
 use warp::http;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RequestSpec {
+    request: Request,
+    url: String,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Request {
@@ -68,9 +76,24 @@ async fn op_dispatch_request(
     args: Value,
     _bufs: BufVec,
 ) -> Result<Value, AnyError> {
-    let r: Request = serde_json::from_value(args)?;
+    let request_spec: RequestSpec = serde_json::from_value(args)?;
     let mut op_state = state.borrow_mut();
-    op_state.borrow_mut::<RequestList>().push(r);
+    op_state
+        .borrow_mut::<RequestList>()
+        .push(request_spec.request.clone());
+
+    let c = reqwest::Client::builder().build()?;
+    let response = c
+        .request(
+            Method::from_str(&request_spec.request.method)?,
+            Url::parse(&request_spec.url)?,
+        )
+        .body(request_spec.request.body)
+        .header(header::ACCEPT, "application/json")
+        .send()
+        .await?;
+
+    println!("{:?}", response);
 
     Ok(serde_json::json!(()))
 }
