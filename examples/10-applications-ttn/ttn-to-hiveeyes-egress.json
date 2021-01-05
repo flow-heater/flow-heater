@@ -1,0 +1,15 @@
+{
+  "temperature_2": -3.2,
+  "temperature_1": -2.9,
+  "analog_in_1": 35.99,
+  "analog_in_3": 3.53,
+  "relative_humidity_2": 57.5,
+  "relative_humidity_1": 55.5,
+  "sf": 8,
+  "bw": 125,
+  "freq": 867.3,
+  "counter": 11,
+  "gtw_count": 1,
+  "gw_eui-{redacted}_rssi": -111,
+  "gw_eui-{redacted}_snr": -2.2
+}

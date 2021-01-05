@@ -1,0 +1,44 @@
+{
+  "app_id": "hiveeyes",
+  "dev_id": "hiveeyes-testdrive-site42-hive2",
+  "downlink_url": "https://integrations.thethingsnetwork.org/ttn-eu/api/v2/down/hiveeyes/beep?key=ttn-account-v2.{redacted}",
+  "hardware_serial": "{redacted}",
+  "port": 2,
+  "counter": 18629,
+  "payload_raw": "BXMnLABnAEQFegCTCAVouAVnAAUKZwBsAHQBoAABAA==",
+  "payload_fields": {
+    "barometric_pressure_5": 1002.8,
+    "digital_out_0": 0,
+    "load_5": 37.64,
+    "temperature_0": 6.8,
+    "temperature_5": 0.5,
+    "temperature_10": 10.8,
+    "relative_humidity_5": 92,
+    "voltage_0": 4.16
+  },
+  "metadata": {
+    "location_source": "registry",
+    "modulation": "LORA",
+    "data_rate": "SF7BW125",
+    "coding_rate": "4/5",
+    "frequency": 868.5,
+    "latitude": 53.00,
+    "longitude": 12.00,
+    "altitude": 35,
+    "time": "2020-12-09T09:25:40.858405812Z",
+    "gateways": [
+      {
+        "gtw_id": "eui-{redacted}",
+        "channel": 2,
+        "rssi": -81,
+        "snr": 8.2,
+        "rf_chain": 0,
+        "latitude": 52,
+        "longitude": 13,
+        "altitude": 20,
+        "timestamp": 405901339,
+        "time": "2020-12-09T09:25:40.83161Z"
+      }
+    ]
+  }
+}
