@@ -318,6 +318,7 @@ dependencies = [
  "sqlx",
  "strum",
  "strum_macros",
+ "thiserror",
  "tokio",
  "uuid",
  "warp",
@@ -327,9 +328,11 @@ dependencies = [
 name = "fh-v8"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "deno_core",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
  "warp",
 ]

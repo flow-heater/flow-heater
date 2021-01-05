@@ -1,4 +1,4 @@
-// use anyhow::Error;
+use anyhow::Result;
 use deno_core::error::AnyError;
 use deno_core::JsRuntime;
 use deno_core::OpState;
@@ -24,6 +24,12 @@ pub struct Response {
     body: Option<Vec<u8>>,
 }
 
+impl Response {
+    pub fn error_msg(reason: &str, r: Self) -> anyhow::Error {
+        anyhow::Error::msg(format!("{}: {:?}", reason, r))
+    }
+}
+
 fn op_get_request(
     state: &mut OpState,
     _args: Value,
@@ -38,7 +44,7 @@ fn op_dispatch_request(
     args: Value,
     _bufs: &mut [ZeroCopyBuf],
 ) -> Result<Value, AnyError> {
-    let r: Request = serde_json::from_value(args).unwrap();
+    let r: Request = serde_json::from_value(args)?;
     *state.borrow_mut::<Request>() = r;
     Ok(serde_json::json!(()))
 }
@@ -62,7 +68,7 @@ impl From<http::Request<Vec<u8>>> for Request {
     }
 }
 
-pub async fn process_request(req: Request, code: Option<String>) -> Response {
+pub async fn process_request(req: Request, code: Option<String>) -> Result<Response> {
     let mut js_runtime = JsRuntime::new(Default::default());
 
     js_runtime.register_op(
@@ -80,14 +86,12 @@ pub async fn process_request(req: Request, code: Option<String>) -> Response {
     js_runtime.op_state().borrow_mut().put::<Request>(req);
 
     if let Some(c) = code {
-        js_runtime.execute("custom_code.js", &c).unwrap();
+        js_runtime.execute("custom_code.js", &c)?;
     } else {
-        js_runtime
-            .execute("flow_heater.js", include_str!("flow_heater.js"))
-            .unwrap();
+        js_runtime.execute("flow_heater.js", include_str!("flow_heater.js"))?;
     }
 
-    js_runtime.run_event_loop().await.unwrap();
+    js_runtime.run_event_loop().await?;
 
     // extract the request
     let state = js_runtime.op_state();
@@ -95,9 +99,9 @@ pub async fn process_request(req: Request, code: Option<String>) -> Response {
     let modified_req = op_state.borrow::<Request>();
     println!("RUST: modified request is: {:?}", modified_req);
 
-    Response {
+    Ok(Response {
         code: 200,
         headers: HashMap::new(),
         body: Some(modified_req.body.as_bytes().to_vec()),
-    }
+    })
 }

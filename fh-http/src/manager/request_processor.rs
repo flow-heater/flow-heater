@@ -1,9 +1,9 @@
+use super::RequestProcessorError;
 use anyhow::Result;
 use fh_v8::{process_request, Request, Response};
 use serde::{self, Deserialize, Serialize};
 use sqlx::{pool::PoolConnection, Sqlite};
-use std::convert::AsRef;
-use std::str::FromStr;
+use std::{convert::AsRef, str::FromStr};
 use strum_macros::{self, AsRefStr, EnumString};
 use uuid::Uuid;
 
@@ -35,7 +35,7 @@ pub(crate) enum RequestProcessorRuntime {
 pub(crate) async fn create_request_processor(
     conn: &mut PoolConnection<Sqlite>,
     data: &RequestProcessor,
-) -> Result<()> {
+) -> Result<(), RequestProcessorError> {
     let id_str = data.id.to_string();
     let language = data.language.as_ref();
     let runtime = data.runtime.as_ref();
@@ -58,26 +58,37 @@ pub(crate) async fn create_request_processor(
 pub(crate) async fn get_request_processor(
     conn: &mut PoolConnection<Sqlite>,
     id: &Uuid,
-) -> Result<RequestProcessor> {
+) -> Result<RequestProcessor, RequestProcessorError> {
     let id_str = id.to_string();
     let row = sqlx::query!(r#"SELECT * FROM request_processor WHERE id = ?1"#, id_str)
         .fetch_one(conn)
-        .await?;
+        .await;
 
-    Ok(RequestProcessor {
-        id: Uuid::from_str(&row.id)?,
-        name: row.name,
-        language: RequestProcessorLanguage::from_str(&row.language)?,
-        runtime: RequestProcessorRuntime::from_str(&row.runtime)?,
-        code: row.code,
-    })
+    match row {
+        Err(x) => match x {
+            sqlx::Error::RowNotFound => {
+                return Err(RequestProcessorError::NotFound {
+                    id: *id,
+                    kind: "RequestProcessor".to_string(),
+                })
+            }
+            _ => Err(RequestProcessorError::Db(x)),
+        },
+        Ok(row) => Ok(RequestProcessor {
+            id: *id,
+            name: row.name,
+            language: RequestProcessorLanguage::from_str(&row.language)?,
+            runtime: RequestProcessorRuntime::from_str(&row.runtime)?,
+            code: row.code,
+        }),
+    }
 }
 
 pub(crate) async fn update_request_processor(
     conn: &mut PoolConnection<Sqlite>,
     id: &Uuid,
     data: &mut RequestProcessor,
-) -> Result<()> {
+) -> Result<(), RequestProcessorError> {
     let _ = get_request_processor(conn, id).await?;
     let id_str = id.to_string();
     let language = data.language.as_ref();
@@ -103,7 +114,7 @@ pub(crate) async fn update_request_processor(
 pub(crate) async fn delete_request_processor(
     conn: &mut PoolConnection<Sqlite>,
     id: &Uuid,
-) -> Result<()> {
+) -> Result<(), RequestProcessorError> {
     let _ = get_request_processor(conn, id).await?;
     let id_str = id.to_string();
     sqlx::query!(
@@ -121,9 +132,7 @@ pub(crate) async fn run_request_processor(
     conn: &mut PoolConnection<Sqlite>,
     id: &Uuid,
     request: Request,
-) -> Result<Response> {
+) -> Result<Response, RequestProcessorError> {
     let p = get_request_processor(conn, id).await?;
-    let res = process_request(request, Some(p.code)).await;
-
-    Ok(res)
+    Ok(process_request(request, Some(p.code)).await?)
 }
