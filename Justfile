@@ -1,14 +1,18 @@
 export RUST_BACKTRACE := "1"
 
 dotenv:
-    [ -f .env ] && echo "Will not overwrite existing .env file ..." || cp .env.example .env
+    @[ -f .env ] && echo "INFO: Will not overwrite existing .env file ..." || cp .env.example .env
 
 db: dotenv
+    @test -e ~/.cargo/bin/sqlx || cargo install sqlx-cli
     sqlx db create
     sqlx migrate run
 
-build:
-    cargo build --verbose
+build: db
+    @echo
+    @echo "INFO: Building the Rust program. On the first invocation, this might take quite a while."
+    @echo
+    cargo build
 
 run: dotenv db
     cargo run --bin fh-http
@@ -16,8 +20,26 @@ run: dotenv db
 test:
     cargo test --verbose
 
-test-e2e:
-    python3 -m venv .venv
-    .venv/bin/pip install --upgrade pip
-    .venv/bin/pip install --requirement tests/requirements.txt
-    .venv/bin/pytest tests
+
+# ------------------------------------------
+#          pytest-based e2e tests
+# ------------------------------------------
+
+venvpath     := ".venv"
+pip          := venvpath + "/bin/pip"
+python       := venvpath + "/bin/python"
+pytest       := venvpath + "/bin/pytest"
+
+test-e2e: setup-virtualenv build
+    @echo "Running e2e tests."
+    @{{pytest}} tests
+
+# Setup Python virtualenv
+setup-virtualenv:
+    #!/usr/bin/env sh
+    if test ! -e {{python}}; then
+        echo "INFO: Setting up Python virtualenv, this will take a moment."
+        python3 -m venv {{venvpath}}
+        {{pip}} install --upgrade pip
+        {{pip}} install --requirement tests/requirements.txt
+    fi
