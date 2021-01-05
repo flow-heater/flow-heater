@@ -1,7 +1,7 @@
 pub(crate) mod filters {
     use crate::manager::{ReqCmd, ReqSender};
     use crate::server::with_sender;
-    use fh_v8::Request;
+    use fh_v8::request::Request;
     use uuid::Uuid;
     use warp::{http, Filter};
 
@@ -59,7 +59,7 @@ pub(crate) mod handlers {
         manager::{ReqCmd, ReqSender},
         server::{FhHttpError, FhLockingError},
     };
-    use fh_v8::Request;
+    use fh_v8::request::Request;
     use tokio::sync::oneshot;
     use uuid::Uuid;
     use warp::{Rejection, Reply};

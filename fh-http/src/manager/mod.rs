@@ -1,6 +1,6 @@
 use self::request_processor::RequestProcessor;
 use anyhow::{Context, Error, Result};
-use fh_v8::{process_request, Request, Response};
+use fh_v8::{process_request, request::Request, response::Response};
 use sqlx::{Pool, SqlitePool};
 use std::{
     env,

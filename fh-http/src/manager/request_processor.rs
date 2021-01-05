@@ -1,6 +1,6 @@
 use super::RequestProcessorError;
 use anyhow::Result;
-use fh_v8::{process_request, Request, Response};
+use fh_v8::{process_request, request::Request, response::Response};
 use serde::{self, Deserialize, Serialize};
 use sqlx::{pool::PoolConnection, Sqlite};
 use std::{convert::AsRef, str::FromStr};
