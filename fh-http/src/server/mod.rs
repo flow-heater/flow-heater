@@ -47,6 +47,7 @@ impl<T> FhHttpError<T> {
 impl Reject for FhHttpError<RecvError> {}
 impl Reject for FhHttpError<RequestProcessorError> {}
 impl Reject for FhHttpError<SendError<ReqCmd>> {}
+impl Reject for FhHttpError<anyhow::Error> {}
 
 async fn handle_rejections(err: Rejection) -> Result<impl Reply, std::convert::Infallible> {
     let code;
