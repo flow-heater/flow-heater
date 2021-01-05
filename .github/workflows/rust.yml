@@ -27,7 +27,7 @@ jobs:
       # Acquire sources.
       - uses: actions/checkout@v2
 
-      - uses: Swatinem/rust-cache@v1
+      # - uses: Swatinem/rust-cache@v1
       - uses: actions/cache@v2
         with:
           path: |
@@ -52,7 +52,7 @@ jobs:
         with:
           python-version: 3.8
 
-      # Setup sqlx and run db migrations
+      # Setup sqlx and run db migrations.
       - name: Install sqlx cli
         run: '(test -f ~/.cargo/bin/sqlx) || cargo install sqlx-cli'
       - name: Create DB and run migrations
