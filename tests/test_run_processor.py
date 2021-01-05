@@ -17,7 +17,11 @@ def test_run_processor(fh_http: ServerLayer):
     """
 
     rp = RequestProcessor(
-        id=None, name="testing", runtime="v8", language="javascript", code=code,
+        id=None,
+        name="testing",
+        runtime="v8",
+        language="javascript",
+        code=code,
     )
 
     response = create_request_processor(rp)
@@ -52,7 +56,11 @@ def test_json_availablity(fh_http: ServerLayer):
     """
 
     rp = RequestProcessor(
-        id=None, name="testing", runtime="v8", language="javascript", code=code,
+        id=None,
+        name="testing",
+        runtime="v8",
+        language="javascript",
+        code=code,
     )
 
     response = create_request_processor(rp)
@@ -69,4 +77,3 @@ def test_json_availablity(fh_http: ServerLayer):
     print(stdout)
     assert 'Stringify: {"a":"b"}' in stdout
     assert "Parse works, too" in stdout
-
