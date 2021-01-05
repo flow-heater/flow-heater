@@ -41,4 +41,3 @@ def test_spike(fh_http: ServerLayer):
     fh_http.stdout.seek(0)
     stdout = fh_http.stdout.read()
     assert "DENO: Got request body" in stdout
-    #assert "RUST: modified request is" in stdout

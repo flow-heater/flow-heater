@@ -109,7 +109,11 @@ pub(crate) mod handlers {
         .await
         .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
-        let res = resp_rx.await.unwrap();
+        let res = resp_rx
+            .await
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
+            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+
         Ok(warp::reply::json(&res))
     }
 }
