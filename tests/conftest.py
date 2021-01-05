@@ -23,3 +23,8 @@ def fh_http():
     server.setUp()
     yield server
     server.tearDown()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def fh_stdout(fh_http):
+    fh_http.stdout.truncate(0)
