@@ -16,6 +16,14 @@ class FlowHeaterLayer(ServerLayer):
             stderr=stderr,
         )
 
+    def get_stdout(self, strip_nulls=True):
+        self.stdout.seek(0)
+        payload = self.stdout.read()
+        # FIXME: There are a bunch of null-bytes at the beginning of STDOUT. Why?
+        if strip_nulls:
+            payload = payload.strip("\x00")
+        return payload
+
 
 @pytest.fixture(scope="session")
 def fh_http():
