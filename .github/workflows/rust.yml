@@ -26,7 +26,7 @@ jobs:
 
       # Acquire sources.
       - uses: actions/checkout@v2
-      
+
       - uses: Swatinem/rust-cache@v1
       - uses: actions/cache@v2
         with:
@@ -36,9 +36,6 @@ jobs:
             ~/.cargo/bin
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: List folder
-        run: ls -la .
 
       # Setup Just command runner.
       - name: Setup Just
@@ -57,7 +54,7 @@ jobs:
 
       # Setup sqlx and run db migrations
       - name: Install sqlx cli
-        run: '(test -f ~/.cargo/bin/sqlx) || cargo install sqlx_cli'
+        run: '(test -f ~/.cargo/bin/sqlx) || cargo install sqlx-cli'
       - name: Create DB and run migrations
         run: just db
 
