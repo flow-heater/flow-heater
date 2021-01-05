@@ -23,6 +23,10 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+
+      # Acquire sources.
+      - uses: actions/checkout@v2
+      
       - uses: Swatinem/rust-cache@v1
       - uses: actions/cache@v2
         with:
@@ -50,9 +54,6 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
-
-      # Acquire sources.
-      - uses: actions/checkout@v2
 
       # Setup sqlx and run db migrations
       - name: Install sqlx cli
