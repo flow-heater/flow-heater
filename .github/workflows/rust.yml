@@ -53,7 +53,7 @@ jobs:
 
       # Setup sqlx and run db migrations
       - name: Install sqlx cli
-        run: "[-f ~/.cargo/bin/sqlx] || cargo install sqlx-cli"
+        run: '(test -f ~/.cargo/bin/sqlx) || cargo install sqlx_cli'
       - name: Create DB and run migrations
         run: just db
 
