@@ -1,6 +1,6 @@
 use self::request_processor::RequestProcessor;
 use anyhow::{Context, Error, Result};
-use fh_v8::{process_request, Request, Response};
+use fh_v8::{process_request, request::Request, response::Response};
 use sqlx::{Pool, SqlitePool};
 use std::{
     env,
@@ -31,7 +31,7 @@ pub enum RequestProcessorError {
 pub(crate) enum ReqCmd {
     Http {
         request: Request,
-        cmd_tx: Responder<Response>,
+        cmd_tx: Responder<Result<Response, RequestProcessorError>>,
     },
     CreateRequestProcessor {
         proc: RequestProcessor,
@@ -75,7 +75,9 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
             request: req,
             cmd_tx,
         } => {
-            let res = process_request(req, None).await?;
+            let res = process_request(req, None)
+                .await
+                .map_err(|e| RequestProcessorError::from(e));
             cmd_tx.send(res).map_err(|e| {
                 Error::msg(format!(
                     "Unable to send Response to server handler: {:?}",

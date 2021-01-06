@@ -29,14 +29,12 @@ def test_run_processor(fh_http: ServerLayer):
 
     response_run = requests.post(f"http://localhost:3030/processor/{rp_id}/run")
     data = response_run.json()
-
     assert 200 == response_run.status_code
 
     # Check STDOUT
     fh_http.stdout.seek(0)
     stdout = fh_http.stdout.read()
     assert "Hello from DENO" in stdout
-    #assert "RUST: modified request is" in stdout
 
 
 def test_json_availability(fh_http: ServerLayer):
