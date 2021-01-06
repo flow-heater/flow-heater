@@ -97,7 +97,7 @@ pub async fn process_request(req: Request, code: Option<String>) -> Result<Respo
     let state = js_runtime.op_state();
     let op_state = state.borrow();
     let modified_req = op_state.borrow::<Request>();
-    println!("RUST: modified request is: {:?}", modified_req);
+    //println!("RUST: modified request is: {:?}", modified_req);
 
     Ok(Response {
         code: 200,

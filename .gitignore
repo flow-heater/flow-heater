@@ -10,5 +10,5 @@ __pycache__
 .idea
 .vscode
 
-# sqlite
-fh-http.db*
+# database
+/var

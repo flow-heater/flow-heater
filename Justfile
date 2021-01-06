@@ -5,6 +5,7 @@ dotenv:
 
 db: dotenv
     @test -e ~/.cargo/bin/sqlx || cargo install sqlx-cli
+    @mkdir -p var/lib
     sqlx db create
     sqlx migrate run
 
@@ -32,7 +33,7 @@ pytest       := venvpath + "/bin/pytest"
 
 test-e2e: setup-virtualenv build
     @echo "Running e2e tests."
-    @{{pytest}} tests
+    @{{pytest}} tests -vvvv
 
 # Setup Python virtualenv
 setup-virtualenv:

@@ -50,3 +50,8 @@ Invoke end-to-end tests:
 ```bash
 just test-e2e
 ```
+
+Invoke specific tests:
+```bash
+pytest -k examples_basic -vvv
+```
