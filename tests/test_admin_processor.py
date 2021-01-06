@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 from typing import Optional
 from enum import Enum
 
+import pytest
 import requests
 from requests import Response
 from lovely.testlayers.server import ServerLayer
@@ -29,6 +30,7 @@ def create_request_processor(rp: RequestProcessor) -> Response:
     return response
 
 
+@pytest.mark.admin
 def test_create_admin_processor(fh_http: ServerLayer):
     rp = RequestProcessor(
         id=None, name="testing", runtime="v8", language="javascript", code="my fun code"
@@ -45,6 +47,7 @@ def test_create_admin_processor(fh_http: ServerLayer):
     create_request_processor(rp2)
 
 
+@pytest.mark.admin
 def test_get_admin_processor(fh_http: ServerLayer):
     rp = RequestProcessor(
         id=None,
@@ -66,6 +69,7 @@ def test_get_admin_processor(fh_http: ServerLayer):
     assert data["code"] == data_get["code"]
 
 
+@pytest.mark.admin
 def test_update_admin_processor(fh_http: ServerLayer):
     rp = RequestProcessor(
         id=None, name="testing", runtime="v8", language="javascript", code="my fun code"
@@ -97,6 +101,7 @@ def test_update_admin_processor(fh_http: ServerLayer):
     assert data_update["code"] == data_get["code"]
 
 
+@pytest.mark.admin
 def test_delete_admin_processor(fh_http: ServerLayer):
     rp = RequestProcessor(
         id=None,
@@ -117,6 +122,7 @@ def test_delete_admin_processor(fh_http: ServerLayer):
     assert 404 == response_get.status_code
 
 
+@pytest.mark.admin
 def test_not_found_processor(fh_http: ServerLayer):
     id = "8a2e00e9-c710-4337-b717-bdcad0396df5"
     assert 404 == requests.post(f"http://localhost:3030/processor/{id}/run").status_code
