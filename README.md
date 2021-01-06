@@ -53,5 +53,10 @@ just test-e2e
 
 Invoke specific tests:
 ```bash
-pytest -k examples_basic -vvv
+
+# Address tests having `example` in their name.
+just test-e2e -k example
+
+# Address tests marked with `@pytest.mark.admin`.
+just test-e2e -m admin
 ```
