@@ -1,0 +1,12 @@
+{
+  "requests": [
+  ],
+  // Outcome from invocation of `respond_with`.
+  // This outlines a response object when using a
+  // response body in binary/non-ASCII format.
+  "response": {
+    "headers": {
+    },
+    "body": "data:application/octet-stream;base64,eyJoZWxsbyI6ICJ3b3JsZCJ9Cg==",
+  },
+}

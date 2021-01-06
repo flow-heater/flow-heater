@@ -1,0 +1,81 @@
+/*
+ * fh-core offers a special invocation style which can be used
+ * to test the outcome of its processing machinery.
+ *
+ * By invoking the designated HTTP endpoint with a special
+ * query argument like `__fh-echo__=true` or a request header
+ * like `FH-Echo: true`, the machinery will mask calls to
+ * `dispatch_request` and `respond_with` but instead will
+ * record their outcomes and return them as a JSON-serialized
+ * HTTP response.
+ *
+**/
+{
+  "requests": [
+    // Outcome from first invocation of `dispatch_request`.
+    // Derived from `http POST https://httpbin.org/anything foo=bar`.
+    {
+      "timestamp": "1985-04-12T23:20:50.52Z",
+      "args": {},
+      "data": "{\"foo\": \"bar\"}",
+      "files": {},
+      "form": {},
+      "headers": {
+        "Accept": "application/json, */*;q=0.5",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Length": "14",
+        "Content-Type": "application/json",
+        "Host": "httpbin.org",
+        "User-Agent": "HTTPie/2.3.0",
+        "X-Amzn-Trace-Id": "Root=1-5ff32db0-5b3642a1761e6cf3256911c6"
+      },
+      "json": {
+        "foo": "bar"
+      },
+      "method": "POST",
+      "origin": "87.122.102.169",
+      "url": "https://httpbin.org/anything"
+    },
+    // Outcome from second invocation of `dispatch_request`.
+    // Derived from `http POST https://httpbin.org/anything foo=bar baz==qux Content-Type:abc`.
+    {
+      "timestamp": "1985-04-12T23:20:50.58Z",
+      "args": {
+        "baz": "qux"
+      },
+      "data": "{\"foo\": \"bar\"}",
+      "files": {},
+      "form": {},
+      "headers": {
+        "Accept": "application/json, */*;q=0.5",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Length": "14",
+        "Content-Type": "abc",
+        "Host": "httpbin.org",
+        "User-Agent": "HTTPie/2.3.0",
+        "X-Amzn-Trace-Id": "Root=1-5ff32feb-12e643834a7a78f8418e6363"
+      },
+      "json": {
+        "foo": "bar"
+      },
+      "method": "POST",
+      "origin": "87.122.102.169",
+      "url": "https://httpbin.org/anything?baz=qux"
+    },
+  ],
+  // Outcome from invocation of `respond_with`.
+  // This outlines a response object when using a JSON response body.
+  "response": {
+    "timestamp": "1985-04-12T23:20:51.01Z",
+    "headers": {
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Origin": "*",
+      "Connection": "keep-alive",
+      "Content-Length": "498",
+      "Content-Type": "application/json",
+      "Date": "Mon, 04 Jan 2021 15:02:57 GMT",
+      "Server": "gunicorn/19.9.0",
+    },
+    "body": "{\"hello\": \"world\"}",
+  },
+}
