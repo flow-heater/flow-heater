@@ -29,6 +29,10 @@ async fn op_dispatch_request(
         .borrow_mut::<RequestList>()
         .push(request_spec.request.clone());
 
+    // TODO: this is the part, where we need to:
+    // - convert the fh_v8::Request to a http::Request
+    // - convert the http::Response to a fh_v8::Response
+    // This is basically described in: https://github.com/flow-heater/fh-core/issues/25
     let c = reqwest::Client::builder().build()?;
     let response = c
         .request(
