@@ -68,3 +68,17 @@ pub(crate) fn prepare_runtime(req: Request) -> JsRuntime {
 
     js_runtime
 }
+
+pub(crate) fn prepare_user_code(code: &str, wrap_prelude: bool) -> String {
+    let mut final_code: String = "".to_string();
+
+    if wrap_prelude {
+        final_code.push_str(include_str!("fh_prelude.js"));
+        final_code.push_str(&code);
+        final_code.push_str(include_str!("fh_sequel.js"));
+    } else {
+        final_code.push_str(&code);
+    }
+
+    final_code
+}
