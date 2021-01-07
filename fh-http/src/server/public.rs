@@ -1,15 +1,18 @@
 pub(crate) mod filters {
-    use crate::manager::{ReqCmd, ReqSender};
     use crate::server::{with_sender, FhHttpError};
-    use fh_v8::request::Request;
+    use fh_core::{request::Request, ReqSender};
+    use fh_db::ReqCmd;
+    use fh_v8::ProcessorCmd;
     use std::convert::TryFrom;
     use uuid::Uuid;
     use warp::{http, Filter, Rejection};
 
     pub(crate) fn public_filters(
-        tx: ReqSender<ReqCmd>,
+        tx_db: ReqSender<ReqCmd>,
+        tx_proc: ReqSender<ProcessorCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-        process_request_old(tx.clone()).or(run_request_processor(tx))
+        process_request_old(tx_db.clone(), tx_proc.clone())
+            .or(run_request_processor(tx_db, tx_proc))
     }
 
     async fn try_extract_request(
@@ -39,49 +42,54 @@ pub(crate) mod filters {
     }
 
     pub(crate) fn run_request_processor(
-        tx: ReqSender<ReqCmd>,
+        tx_db: ReqSender<ReqCmd>,
+        tx_proc: ReqSender<ProcessorCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("processor" / Uuid / "run")
-            .and(with_sender(tx.clone()))
+            .and(with_sender(tx_db.clone()))
+            .and(with_sender(tx_proc.clone()))
             .and(extract_request())
             .and_then(super::handlers::run_request_processor)
     }
 
     pub(crate) fn process_request_old(
-        tx: ReqSender<ReqCmd>,
+        tx_db: ReqSender<ReqCmd>,
+        tx_proc: ReqSender<ProcessorCmd>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("hello" / String)
-            .and(with_sender(tx.clone()))
+            .and(with_sender(tx_db.clone()))
+            .and(with_sender(tx_proc.clone()))
             .and(extract_request())
             .and_then(super::handlers::process_request)
     }
 }
 
 pub(crate) mod handlers {
-    use crate::{
-        manager::{ReqCmd, ReqSender},
-        server::{FhHttpError, FhLockingError},
-    };
-    use fh_v8::request::Request;
+    use crate::server::FhHttpError;
+    use fh_core::{request::Request, FhLockingError, ReqSender};
+    use fh_db::ReqCmd;
+    use fh_v8::ProcessorCmd;
     use tokio::sync::oneshot;
     use uuid::Uuid;
     use warp::{Rejection, Reply};
 
     pub(crate) async fn run_request_processor(
         id: Uuid,
-        tx: ReqSender<ReqCmd>,
+        tx_db: ReqSender<ReqCmd>,
+        tx_proc: ReqSender<ProcessorCmd>,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let mut tx2 = tx
+        let mut tx2 = tx_proc
             .lock()
             .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
             .clone();
 
         let (cmd_tx, cmd_rx) = oneshot::channel();
-        tx2.send(ReqCmd::RunRequestProcessor {
+        tx2.send(ProcessorCmd::RunRequestProcessor {
             id,
             request,
             cmd_tx,
+            tx_db,
         })
         .await
         .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
@@ -96,16 +104,17 @@ pub(crate) mod handlers {
 
     pub(crate) async fn process_request(
         _name: String,
-        tx: ReqSender<ReqCmd>,
+        _tx_db: ReqSender<ReqCmd>,
+        tx_proc: ReqSender<ProcessorCmd>,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let mut tx2 = tx
+        let mut tx2 = tx_proc
             .lock()
             .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
             .clone();
 
         let (resp_tx, resp_rx) = oneshot::channel();
-        tx2.send(ReqCmd::Http {
+        tx2.send(ProcessorCmd::Http {
             request,
             cmd_tx: resp_tx,
         })

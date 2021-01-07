@@ -1,19 +1,14 @@
 use self::request_processor::RequestProcessor;
 use anyhow::{Context, Error, Result};
-use fh_v8::{process_request, request::Request, response::Response};
-use sqlx::{Pool, SqlitePool};
-use std::{
-    env,
-    sync::{Arc, Mutex},
-};
+use fh_core::{DbPool, DbType, Responder, TypedPool};
+use request_conversation::RequestConversation;
+use std::env;
 use thiserror::Error;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
-type Responder<T> = oneshot::Sender<T>;
-pub(crate) type ReqSender<T> = Arc<Mutex<mpsc::Sender<T>>>;
-
-pub(crate) mod request_processor;
+pub mod request_conversation;
+pub mod request_processor;
 
 #[derive(Error, Debug)]
 pub enum RequestProcessorError {
@@ -24,15 +19,17 @@ pub enum RequestProcessorError {
     #[error("Unable to parse enum: {0}")]
     Parse(#[from] strum::ParseError),
     #[error(transparent)]
+    UuidParse(#[from] uuid::Error),
+    #[error(transparent)]
+    JsonSerialize(#[from] serde_json::Error),
+    #[error(transparent)]
     Processing(#[from] anyhow::Error),
+    #[error("{0}")]
+    Locking(String),
 }
 
 #[derive(Debug)]
-pub(crate) enum ReqCmd {
-    Http {
-        request: Request,
-        cmd_tx: Responder<Result<Response, RequestProcessorError>>,
-    },
+pub enum ReqCmd {
     CreateRequestProcessor {
         proc: RequestProcessor,
         cmd_tx: Responder<Result<RequestProcessor, RequestProcessorError>>,
@@ -50,15 +47,14 @@ pub(crate) enum ReqCmd {
         id: Uuid,
         cmd_tx: Responder<Result<(), RequestProcessorError>>,
     },
-    RunRequestProcessor {
-        id: Uuid,
-        request: Request,
-        cmd_tx: Responder<Result<Response, RequestProcessorError>>,
+    CreateRequestConversation {
+        request_processor_id: Uuid,
+        cmd_tx: Responder<Result<RequestConversation, RequestProcessorError>>,
     },
 }
 
-pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
-    let pool = SqlitePool::connect(&env::var("DATABASE_URL")?)
+pub async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
+    let pool = TypedPool::connect(&env::var("DATABASE_URL")?)
         .await
         .context("Connection to DB failed")?;
 
@@ -69,22 +65,8 @@ pub(crate) async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::
     Ok(())
 }
 
-async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
+async fn process_command(cmd: ReqCmd, pool: &DbPool<DbType>) -> Result<()> {
     match cmd {
-        ReqCmd::Http {
-            request: req,
-            cmd_tx,
-        } => {
-            let res = process_request(req, None)
-                .await
-                .map_err(|e| RequestProcessorError::from(e));
-            cmd_tx.send(res).map_err(|e| {
-                Error::msg(format!(
-                    "Unable to send Response to server handler: {:?}",
-                    e
-                ))
-            })?;
-        }
         ReqCmd::CreateRequestProcessor {
             proc: processor,
             cmd_tx,
@@ -138,23 +120,19 @@ async fn process_command(cmd: ReqCmd, pool: &Pool<sqlx::Sqlite>) -> Result<()> {
                 .send(p)
                 .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
         }
-        ReqCmd::RunRequestProcessor {
-            id,
-            request,
+        ReqCmd::CreateRequestConversation {
+            request_processor_id,
             cmd_tx,
         } => {
-            let r = self::request_processor::run_request_processor(
+            let conv = self::request_conversation::create_request_conversation(
                 &mut pool.acquire().await?,
-                &id,
-                request,
+                &request_processor_id,
             )
             .await;
-            cmd_tx.send(r).map_err(|e| {
-                Error::msg(format!(
-                    "Unable to send Response to server handler: {:?}",
-                    e
-                ))
-            })?;
+
+            cmd_tx
+                .send(conv)
+                .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
         }
     }
 

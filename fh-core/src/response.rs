@@ -4,9 +4,9 @@ use warp::http;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
-    pub(crate) code: usize,
-    pub(crate) headers: HashMap<String, String>,
-    pub(crate) body: Option<Vec<u8>>,
+    pub code: usize,
+    pub headers: HashMap<String, String>,
+    pub body: Option<Vec<u8>>,
 }
 
 impl Response {

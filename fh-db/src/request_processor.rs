@@ -1,39 +1,38 @@
 use super::RequestProcessorError;
 use anyhow::Result;
-use fh_v8::{process_request, request::Request, response::Response};
+use fh_core::DbConnection;
 use serde::{self, Deserialize, Serialize};
-use sqlx::{pool::PoolConnection, Sqlite};
 use std::{convert::AsRef, str::FromStr};
 use strum_macros::{self, AsRefStr, EnumString};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct RequestProcessor {
+pub struct RequestProcessor {
     #[serde(skip_deserializing)]
     #[serde(default = "Uuid::new_v4")]
-    pub(crate) id: Uuid,
-    pub(crate) name: String,
-    pub(crate) language: RequestProcessorLanguage,
-    pub(crate) runtime: RequestProcessorRuntime,
-    pub(crate) code: String,
+    pub id: Uuid,
+    pub name: String,
+    pub language: RequestProcessorLanguage,
+    pub runtime: RequestProcessorRuntime,
+    pub code: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsRefStr, EnumString)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum RequestProcessorLanguage {
+pub enum RequestProcessorLanguage {
     Javascript,
     Typescript,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsRefStr, EnumString)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum RequestProcessorRuntime {
+pub enum RequestProcessorRuntime {
     V8,
     WASM,
 }
 
 pub(crate) async fn create_request_processor(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut DbConnection,
     data: &RequestProcessor,
 ) -> Result<(), RequestProcessorError> {
     let id_str = data.id.to_string();
@@ -56,7 +55,7 @@ pub(crate) async fn create_request_processor(
 }
 
 pub(crate) async fn get_request_processor(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut DbConnection,
     id: &Uuid,
 ) -> Result<RequestProcessor, RequestProcessorError> {
     let id_str = id.to_string();
@@ -85,7 +84,7 @@ pub(crate) async fn get_request_processor(
 }
 
 pub(crate) async fn update_request_processor(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut DbConnection,
     id: &Uuid,
     data: &mut RequestProcessor,
 ) -> Result<(), RequestProcessorError> {
@@ -112,7 +111,7 @@ pub(crate) async fn update_request_processor(
 }
 
 pub(crate) async fn delete_request_processor(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut DbConnection,
     id: &Uuid,
 ) -> Result<(), RequestProcessorError> {
     let _ = get_request_processor(conn, id).await?;
@@ -126,13 +125,4 @@ pub(crate) async fn delete_request_processor(
     .await?;
 
     Ok(())
-}
-
-pub(crate) async fn run_request_processor(
-    conn: &mut PoolConnection<Sqlite>,
-    id: &Uuid,
-    request: Request,
-) -> Result<Response, RequestProcessorError> {
-    let p = get_request_processor(conn, id).await?;
-    Ok(process_request(request, Some(p.code)).await?)
 }

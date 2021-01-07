@@ -13,9 +13,12 @@ dotenv:
 # Invoke DB migrations. Also create database if it doesn't exist yet.
 db: dotenv
     @test -e ~/.cargo/bin/sqlx || cargo install sqlx-cli
-    @mkdir -p var/lib
+    @mkdir -p var/lib fh-db/var/lib
     sqlx db create
     sqlx migrate run
+
+clean-db:
+    rm -f ./var/lib/fh-http.db
 
 # Build the Rust program.
 build: db
@@ -25,12 +28,12 @@ build: db
     cargo build
 
 # Run the Rust program.
-run: dotenv db
+run: db
     cargo run --bin fh-http
 
 # Run unit tests.
 test:
-    cargo test --verbose
+    cargo test --lib --bin fh-http  
 
 
 # ------------------------------------------

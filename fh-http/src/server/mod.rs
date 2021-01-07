@@ -1,16 +1,18 @@
 pub(crate) mod admin;
 pub(crate) mod public;
 
-use crate::manager::{ReqCmd, ReqSender, RequestProcessorError};
 use crate::server::admin::filters::admin_filters;
 use crate::server::public::filters::public_filters;
+use fh_core::ReqSender;
+use fh_db::{ReqCmd, RequestProcessorError};
+use fh_v8::ProcessorCmd;
 use serde::Serialize;
 use tokio::sync::{mpsc::error::SendError, oneshot::error::RecvError};
 use warp::{http::StatusCode, reject::Reject, Filter, Rejection, Reply};
 
-pub(crate) fn with_sender(
-    tx: ReqSender<ReqCmd>,
-) -> impl Filter<Extract = (ReqSender<ReqCmd>,), Error = std::convert::Infallible> + Clone {
+pub(crate) fn with_sender<T: Sync + Send>(
+    tx: ReqSender<T>,
+) -> impl Filter<Extract = (ReqSender<T>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || tx.clone())
 }
 
@@ -19,19 +21,6 @@ struct ErrorMessage {
     code: u16,
     message: String,
 }
-
-#[derive(Debug)]
-pub struct FhLockingError<T> {
-    err: T,
-}
-
-impl<T> FhLockingError<T> {
-    fn new(err: T) -> Self {
-        Self { err }
-    }
-}
-
-impl Reject for FhLockingError<String> {}
 
 #[derive(Debug)]
 pub struct FhHttpError<T> {
@@ -47,6 +36,7 @@ impl<T> FhHttpError<T> {
 impl Reject for FhHttpError<RecvError> {}
 impl Reject for FhHttpError<RequestProcessorError> {}
 impl Reject for FhHttpError<SendError<ReqCmd>> {}
+impl Reject for FhHttpError<SendError<ProcessorCmd>> {}
 impl Reject for FhHttpError<anyhow::Error> {}
 
 async fn handle_rejections(err: Rejection) -> Result<impl Reply, std::convert::Infallible> {
@@ -96,9 +86,9 @@ async fn handle_rejections(err: Rejection) -> Result<impl Reply, std::convert::I
     Ok(warp::reply::with_status(json, code))
 }
 
-pub(crate) async fn web_server(tx: ReqSender<ReqCmd>) {
-    let routes = public_filters(tx.clone())
-        .or(admin_filters(tx.clone()))
+pub(crate) async fn web_server(tx_db: ReqSender<ReqCmd>, tx_proc: ReqSender<ProcessorCmd>) {
+    let routes = public_filters(tx_db.clone(), tx_proc.clone())
+        .or(admin_filters(tx_db.clone()))
         .recover(handle_rejections);
 
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await
