@@ -141,20 +141,36 @@ pub(crate) async fn get_request_conversation(
     }
 }
 
-#[allow(dead_code)]
 pub(crate) async fn get_audit_items(
-    conn: &mut DbConnection,
+    _conn: &mut DbConnection,
     conversation_id: &Uuid,
 ) -> Result<Vec<AuditItem>, RequestProcessorError> {
-    let id_str = conversation_id.to_string();
-    let _row = sqlx::query!(
-        r#"SELECT * FROM request_conversation WHERE id = ?1"#,
-        id_str
-    )
-    .fetch_one(conn)
-    .await;
+    let _id_str = conversation_id.to_string();
+    // let mut rows = sqlx::query("SELECT * FROM conversation_audit_log WHERE id = ?")
+    //     .bind(id_str)
+    //     .fetch(conn);
 
-    todo!()
+    let items = Vec::new();
+
+    // while let Some(row) = rows.try_next().await? {
+    //     items.push(match row.try_get("kind")? {
+    //        "request" => Ok(AuditItem::Request {
+    //            id: Uuid::from_str(&row.id)?,
+    //            inc: 0,
+    //            conversation_id: conversation_id.clone(),
+    //            payload: serde_json::from_str(&row.payload),
+    //        }),
+    //        "response" => Ok(AuditItem::Response {
+    //            id: (), id: (), conversation_id: (), payload: ()
+    //            conversation_id: (),
+    //            request_id: (),
+    //            payload: (),
+    //        }),
+    //        "log" => Ok(AuditItem::Log { id: (), conversation_id: (), payload: ()}),
+    //    })
+    // }
+
+    Ok(items)
 }
 
 pub(crate) async fn create_audit_item(

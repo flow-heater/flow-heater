@@ -59,6 +59,10 @@ pub enum ReqCmd {
         item: AuditItem,
         cmd_tx: Responder<Result<AuditItem, RequestProcessorError>>,
     },
+    GetConversationItems {
+        id: Uuid,
+        cmd_tx: Responder<Result<Vec<AuditItem>, RequestProcessorError>>,
+    },
 }
 
 pub async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
@@ -149,6 +153,14 @@ async fn process_command(cmd: ReqCmd, pool: &DbPool<DbType>) -> Result<()> {
 
             cmd_tx
                 .send(item)
+                .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
+        }
+        ReqCmd::GetConversationItems { id, cmd_tx } => {
+            let items =
+                self::request_conversation::get_audit_items(&mut pool.acquire().await?, &id).await;
+
+            cmd_tx
+                .send(items)
                 .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
         }
     }
