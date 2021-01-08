@@ -8,17 +8,17 @@ use warp::http;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RequestSpec {
-    pub(crate) request: Request,
-    pub(crate) url: String,
+    pub request: Request,
+    pub url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Request {
-    pub(crate) headers: HashMap<String, String>,
-    pub(crate) body: String,
-    pub(crate) method: String,
-    pub(crate) path: String,
-    pub(crate) query: String,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub method: String,
+    pub path: String,
+    pub query: String,
 }
 
 impl TryFrom<http::Request<Vec<u8>>> for Request {
@@ -43,8 +43,8 @@ impl TryFrom<http::Request<Vec<u8>>> for Request {
 }
 
 #[derive(Debug)]
-pub(crate) struct RequestList {
-    pub(crate) inner: Vec<Request>,
+pub struct RequestList {
+    pub inner: Vec<Request>,
 }
 
 impl Deref for RequestList {

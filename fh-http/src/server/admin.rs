@@ -1,6 +1,7 @@
 pub(crate) mod filters {
-    use crate::manager::{ReqCmd, ReqSender};
     use crate::server::with_sender;
+    use fh_core::ReqSender;
+    use fh_db::ReqCmd;
     use uuid::Uuid;
     use warp::Filter;
 
@@ -53,9 +54,9 @@ pub(crate) mod filters {
 }
 
 pub(crate) mod handlers {
-    use crate::manager::request_processor::RequestProcessor;
-    use crate::manager::{ReqCmd, ReqSender};
-    use crate::server::{FhHttpError, FhLockingError};
+    use crate::server::FhHttpError;
+    use fh_core::{FhLockingError, ReqSender};
+    use fh_db::{request_processor::RequestProcessor, ReqCmd};
     use tokio::sync::oneshot;
     use uuid::Uuid;
 

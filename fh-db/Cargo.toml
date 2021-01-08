@@ -1,5 +1,5 @@
 [package]
-name = "fh-http"
+name = "fh-db"
 version = "0.1.0"
 authors = ["Tim Eggert <tim@elbart.com>"]
 edition = "2018"
@@ -7,12 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fh-v8 = {version="0.1", path="../fh-v8"}
-fh-db = {version="0.1", path="../fh-db"}
 fh-core = {version="0.1", path="../fh-core"}
 tokio = {version="0.2", features=["full"]}
-warp = "0.2"
 anyhow = "1"
 uuid = { version = "0.8", features = ["serde", "v4"] }
+serde_json = "1"
 serde = "1"
-dotenv = "0.15"
+sqlx = { version = "0.4", features = [ "sqlite", "runtime-tokio-rustls" ] }
+strum_macros = "0.20"
+strum = "0.20"
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }

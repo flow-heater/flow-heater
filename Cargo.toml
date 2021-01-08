@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "fh-core",
     "fh-v8",
     "fh-http",
+    "fh-db"
 ]

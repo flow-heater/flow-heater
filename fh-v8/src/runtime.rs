@@ -1,9 +1,9 @@
-use crate::request::{Request, RequestList, RequestSpec};
 use anyhow::Result;
 use deno_core::JsRuntime;
 use deno_core::OpState;
 use deno_core::ZeroCopyBuf;
 use deno_core::{error::AnyError, BufVec};
+use fh_core::request::{Request, RequestList, RequestSpec};
 use reqwest::{header, Method, Url};
 use serde_json::Value;
 use std::str::FromStr;

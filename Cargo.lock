@@ -196,6 +196,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "chrono"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+dependencies = [
+ "libc",
+ "num-integer",
+ "num-traits",
+ "serde",
+ "time",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -338,18 +352,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 
 [[package]]
-name = "fh-http"
+name = "fh-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "dotenv",
- "fh-v8",
+ "serde",
+ "sqlx",
+ "tokio",
+ "warp",
+]
+
+[[package]]
+name = "fh-db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "fh-core",
  "serde",
  "serde_json",
  "sqlx",
  "strum",
  "strum_macros",
  "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "fh-http"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenv",
+ "fh-core",
+ "fh-db",
+ "fh-v8",
+ "serde",
  "tokio",
  "uuid",
  "warp",
@@ -361,11 +400,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "deno_core",
+ "fh-core",
+ "fh-db",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
+ "uuid",
  "warp",
 ]
 
@@ -1019,6 +1061,16 @@ dependencies = [
  "lexical-core",
  "memchr",
  "version_check",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-traits",
 ]
 
 [[package]]
