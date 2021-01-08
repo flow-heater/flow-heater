@@ -27,7 +27,13 @@ def create_processor(filename):
 
 
 def run_processor(identifier, method="get", **kwargs):
-    response = requests.request(method, f"http://localhost:3030/processor/{identifier}/run", **kwargs)
+    response = requests.request(
+        method, f"http://localhost:3030/processor/{identifier}/run", **kwargs
+    )
+
+    if response.status_code < 300:
+        assert "fh-conversation-id" in response.headers
+
     return response
 
 

@@ -246,9 +246,15 @@ pub async fn process_request(
 
     // println!("Requests: {:?}", requests);
 
+    let mut response_headers = HashMap::new();
+    response_headers.insert(
+        "FH-Conversation-Id".to_string(),
+        conversation_id.to_string(),
+    );
+
     Ok(Response {
         code: 200,
-        headers: HashMap::new(),
+        headers: response_headers,
         body: Some(
             requests
                 .iter()

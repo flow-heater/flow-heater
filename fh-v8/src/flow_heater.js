@@ -1,5 +1,5 @@
 async function main(fh, request) {
-    await fh.log(`DENO: Got request body: ${request.body}, content-type header: ${request.headers['content-type']}, method: ${request.method}\n`);
+    await fh.log(`DENO: Got request body: ${request.body}, content-type header: ${request.headers['content-type']}, method: ${request.method}`);
 
     // modify the requests data and return it back to the rust-context
     request.method = 'POST';

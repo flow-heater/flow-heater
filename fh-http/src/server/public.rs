@@ -99,7 +99,15 @@ pub(crate) mod handlers {
             .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
             .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
-        Ok(warp::reply::json(&res))
+        Ok(warp::reply::with_header(
+            warp::reply::json(&res),
+            "FH-Conversation-Id",
+            res.headers
+                .get("FH-Conversation-Id")
+                .ok_or(warp::reject::custom(FhHttpError::new(anyhow::Error::msg(
+                    "Missing response header 'FH-Conversation-Id'.",
+                ))))?,
+        ))
     }
 
     pub(crate) async fn process_request(
@@ -127,6 +135,14 @@ pub(crate) mod handlers {
             .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
             .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
 
-        Ok(warp::reply::json(&res))
+        Ok(warp::reply::with_header(
+            warp::reply::json(&res),
+            "FH-Conversation-Id",
+            res.headers
+                .get("FH-Conversation-Id")
+                .ok_or(warp::reject::custom(FhHttpError::new(anyhow::Error::msg(
+                    "Missing response header 'FH-Conversation-Id'.",
+                ))))?,
+        ))
     }
 }
