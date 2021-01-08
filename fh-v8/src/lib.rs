@@ -8,8 +8,9 @@ use fh_core::{
     ReqSender, Responder,
 };
 use fh_db::{
-    request_conversation::RequestConversation, request_processor::RequestProcessor, ReqCmd,
-    RequestProcessorError,
+    request_conversation::RequestConversation,
+    request_processor::{RequestProcessor, RequestProcessorLanguage, RequestProcessorRuntime},
+    ReqCmd, RequestProcessorError,
 };
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
@@ -29,7 +30,8 @@ pub async fn request_processing_manager(
 pub enum ProcessorCmd {
     Http {
         request: Request,
-        cmd_tx: Responder<Result<Response, anyhow::Error>>,
+        cmd_tx: Responder<Result<Response, RequestProcessorError>>,
+        tx_db: ReqSender<ReqCmd>,
     },
     RunRequestProcessor {
         id: Uuid,
@@ -44,8 +46,53 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
         ProcessorCmd::Http {
             request: req,
             cmd_tx,
+            tx_db,
         } => {
-            let res = process_request(req, None).await;
+            let req_proc_res = create_request_processor(
+                tx_db.clone(),
+                RequestProcessor {
+                    id: Uuid::new_v4(),
+                    name: "temporary".to_string(),
+                    language: RequestProcessorLanguage::Javascript,
+                    runtime: RequestProcessorRuntime::V8,
+                    code: prepare_user_code(include_str!("flow_heater.js"), true),
+                },
+            )
+            .await;
+
+            let req_proc = match req_proc_res {
+                Err(err) => {
+                    cmd_tx.send(Err(err)).map_err(|e| {
+                        Error::msg(format!(
+                            "Unable to send Response to server handler: {:?}",
+                            e
+                        ))
+                    })?;
+
+                    return Ok(());
+                }
+                Ok(procc) => procc,
+            };
+
+            let conversation_res = create_request_conversation(tx_db.clone(), req_proc.id).await;
+            let conversation_id = match conversation_res {
+                Err(err) => {
+                    cmd_tx.send(Err(err)).map_err(|e| {
+                        Error::msg(format!(
+                            "Unable to send Response to server handler: {:?}",
+                            e
+                        ))
+                    })?;
+
+                    return Ok(());
+                }
+                Ok(conv) => conv.id,
+            };
+
+            let res = process_request(tx_db.clone(), req, conversation_id, req_proc.code)
+                .await
+                .map_err(RequestProcessorError::Processing);
+
             cmd_tx.send(res).map_err(|e| {
                 Error::msg(format!(
                     "Unable to send Response to server handler: {:?}",
@@ -60,7 +107,7 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
             tx_db,
         } => {
             let conversation_res = create_request_conversation(tx_db.clone(), id).await;
-            let _conversation_id = match conversation_res {
+            let conversation_id = match conversation_res {
                 Err(err) => {
                     cmd_tx.send(Err(err)).map_err(|e| {
                         Error::msg(format!(
@@ -74,7 +121,7 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
                 Ok(conv) => conv.id,
             };
 
-            let req_proc_res = get_request_processor(tx_db, id).await;
+            let req_proc_res = get_request_processor(tx_db.clone(), id).await;
 
             let request_processor = match req_proc_res {
                 Err(err) => {
@@ -90,9 +137,14 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
                 Ok(req_proc) => req_proc,
             };
 
-            let r = process_request(request, Some(request_processor.code))
-                .await
-                .map_err(RequestProcessorError::Processing);
+            let r = process_request(
+                tx_db.clone(),
+                request,
+                conversation_id,
+                request_processor.code,
+            )
+            .await
+            .map_err(RequestProcessorError::Processing);
 
             cmd_tx.send(r).map_err(|e| {
                 Error::msg(format!(
@@ -104,6 +156,29 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
     }
 
     Ok(())
+}
+async fn create_request_processor(
+    tx_db: ReqSender<ReqCmd>,
+    proc: RequestProcessor,
+) -> Result<RequestProcessor, RequestProcessorError> {
+    let mut tx_db2 = tx_db
+        .lock()
+        .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
+        .clone();
+
+    let (cmd_tx2, cmd_rx2) = oneshot::channel();
+
+    tx_db2
+        .send(ReqCmd::CreateRequestProcessor {
+            cmd_tx: cmd_tx2,
+            proc,
+        })
+        .await
+        .map_err(anyhow::Error::new)?;
+
+    cmd_rx2
+        .await
+        .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?
 }
 
 async fn create_request_conversation(
@@ -154,18 +229,14 @@ async fn get_request_processor(
         .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?
 }
 
-pub async fn process_request(req: Request, code: Option<String>) -> Result<Response> {
-    let mut js_runtime = prepare_runtime(req.clone());
-
-    if let Some(c) = code {
-        js_runtime.execute("custom_code.js", &prepare_user_code(&c, false))?;
-    } else {
-        js_runtime.execute(
-            "flow_heater.js",
-            &prepare_user_code(include_str!("flow_heater.js"), true),
-        )?;
-    }
-
+pub async fn process_request(
+    tx_db: ReqSender<ReqCmd>,
+    req: Request,
+    conversation_id: Uuid,
+    code: String,
+) -> Result<Response> {
+    let mut js_runtime = prepare_runtime(tx_db, req.clone(), conversation_id);
+    js_runtime.execute("custom_code.js", &prepare_user_code(&code, false))?;
     js_runtime.run_event_loop().await?;
 
     // extract the requests

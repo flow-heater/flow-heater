@@ -1,13 +1,13 @@
 use super::{request_processor::get_request_processor, RequestProcessorError};
 use anyhow::Result;
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use fh_core::DbConnection;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) enum AuditEntry {
+pub enum AuditItem {
     Request {
         id: Uuid,
         inc: usize,
@@ -27,33 +27,47 @@ pub(crate) enum AuditEntry {
     },
 }
 
-impl std::string::ToString for AuditEntry {
+impl std::string::ToString for AuditItem {
     fn to_string(&self) -> String {
         match self {
-            AuditEntry::Request { .. } => "request".to_string(),
-            AuditEntry::Response { .. } => "response".to_string(),
-            AuditEntry::Log { .. } => "log".to_string(),
+            AuditItem::Request { .. } => "request".to_string(),
+            AuditItem::Response { .. } => "response".to_string(),
+            AuditItem::Log { .. } => "log".to_string(),
         }
     }
 }
 
-impl AuditEntry {
+impl AuditItem {
     fn get_parent(&self) -> Option<Uuid> {
         match self {
-            AuditEntry::Response { request_id, .. } => Some(*request_id),
+            AuditItem::Response { request_id, .. } => Some(*request_id),
             _ => None,
+        }
+    }
+
+    fn get_conversation_id(&self) -> Uuid {
+        match self {
+            AuditItem::Request {
+                conversation_id, ..
+            } => *conversation_id,
+            AuditItem::Response {
+                conversation_id, ..
+            } => *conversation_id,
+            AuditItem::Log {
+                conversation_id, ..
+            } => *conversation_id,
         }
     }
 
     fn get_payload(&self) -> Result<String, RequestProcessorError> {
         match self {
-            AuditEntry::Request { payload, .. } => {
+            AuditItem::Request { payload, .. } => {
                 serde_json::to_string(&payload).map_err(RequestProcessorError::JsonSerialize)
             }
-            AuditEntry::Response { payload, .. } => {
+            AuditItem::Response { payload, .. } => {
                 serde_json::to_string(&payload).map_err(RequestProcessorError::JsonSerialize)
             }
-            AuditEntry::Log { payload, .. } => Ok(payload.to_owned()),
+            AuditItem::Log { payload, .. } => Ok(payload.to_owned()),
         }
     }
 }
@@ -61,10 +75,9 @@ impl AuditEntry {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestConversation {
     pub id: Uuid,
-    #[serde(with = "chrono::serde::ts_nanoseconds")]
     created_at: chrono::DateTime<Utc>,
     request_processor_id: Uuid,
-    items: Vec<AuditEntry>,
+    items: Vec<AuditItem>,
 }
 
 pub(crate) async fn create_request_conversation(
@@ -77,13 +90,13 @@ pub(crate) async fn create_request_conversation(
     let id_str = conversation_id.to_string();
     let req_id_str = request_processor_id.to_string();
     let now = Utc::now();
-    let now_ts = now.timestamp_nanos();
+    let now_str = now.to_rfc3339();
     sqlx::query!(
         r#"INSERT INTO request_conversation
                     (id, created_at, request_processor)
                     VALUES (?1, ?2, ?3)"#,
         id_str,
-        now_ts,
+        now_str,
         req_id_str,
     )
     .execute(conn)
@@ -121,19 +134,20 @@ pub(crate) async fn get_request_conversation(
         },
         Ok(row) => Ok(RequestConversation {
             id: *id,
-            created_at: Utc.timestamp(row.created_at, 0),
+            created_at: DateTime::parse_from_rfc3339(&row.created_at)?.with_timezone(&Utc),
             request_processor_id: Uuid::from_str(&row.request_processor)?,
             items: Vec::new(),
         }),
     }
 }
 
-pub(crate) async fn get_audit_log_entries(
+#[allow(dead_code)]
+pub(crate) async fn get_audit_items(
     conn: &mut DbConnection,
     conversation_id: &Uuid,
-) -> Result<Vec<AuditEntry>, RequestProcessorError> {
+) -> Result<Vec<AuditItem>, RequestProcessorError> {
     let id_str = conversation_id.to_string();
-    let row = sqlx::query!(
+    let _row = sqlx::query!(
         r#"SELECT * FROM request_conversation WHERE id = ?1"#,
         id_str
     )
@@ -143,36 +157,35 @@ pub(crate) async fn get_audit_log_entries(
     todo!()
 }
 
-pub(crate) async fn create_audit_log_entry(
+pub(crate) async fn create_audit_item(
     conn: &mut DbConnection,
-    conversation_id: &Uuid,
-    item: AuditEntry,
-) -> Result<Uuid, RequestProcessorError> {
-    let conv = get_request_conversation(conn, conversation_id).await?;
+    item: AuditItem,
+) -> Result<AuditItem, RequestProcessorError> {
+    let conv = get_request_conversation(conn, &item.get_conversation_id()).await?;
 
     let item_id = Uuid::new_v4();
     let item_id_str = item_id.to_string();
     let conv_id_str = conv.id.to_string();
-    let created_at = Utc::now().timestamp_nanos();
+    let created_at = Utc::now().to_rfc3339();
     let kind = item.to_string();
     let payload = item.get_payload()?;
-    let parent = item
+    let _parent = item
         .get_parent()
         .map_or("".to_string(), |id| id.to_string());
 
+    // TODO: either parent is NULL or filled with a string
     sqlx::query!(
         r#"INSERT INTO conversation_audit_log
-                    (id, created_at, request_conversation, parent, kind, payload)
-                    VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
+                    (id, created_at, request_conversation, kind, payload)
+                    VALUES (?1, ?2, ?3, ?4, ?5)"#,
         item_id_str,
         created_at,
         conv_id_str,
-        parent,
         kind,
         payload,
     )
     .execute(conn)
     .await?;
 
-    Ok(item_id)
+    Ok(item)
 }

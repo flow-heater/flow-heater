@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS request_conversation ( 
     id TEXT PRIMARY KEY NOT NULL,
-    created_at INTEGER NOT NULL,    -- unix epoch UTC
+    created_at TEXT NOT NULL,    -- RFC3339 string
     request_processor TEXT NOT NULL,
 
     FOREIGN KEY(request_processor) REFERENCES request_processor(id)
@@ -8,11 +8,12 @@ CREATE TABLE IF NOT EXISTS request_conversation (
 
 CREATE TABLE IF NOT EXISTS conversation_audit_log (
     id TEXT PRIMARY KEY NOT NULL,
-    created_at INTEGER NOT NULL,    -- unix epoch UTC
+    created_at TEXT NOT NULL,    -- RFC3339 string
     request_conversation TEXT NOT NULL,
-    parent TEXT,
+    parent TEXT NULL,
     kind TEXT NOT NULL,
     payload TEXT NOT NULL,
 
     FOREIGN KEY(request_conversation) REFERENCES request_conversation(id)
+    FOREIGN KEY(parent) REFERENCES conversation_audit_log(id)
 );

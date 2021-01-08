@@ -104,7 +104,7 @@ pub(crate) mod handlers {
 
     pub(crate) async fn process_request(
         _name: String,
-        _tx_db: ReqSender<ReqCmd>,
+        tx_db: ReqSender<ReqCmd>,
         tx_proc: ReqSender<ProcessorCmd>,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -117,6 +117,7 @@ pub(crate) mod handlers {
         tx2.send(ProcessorCmd::Http {
             request,
             cmd_tx: resp_tx,
+            tx_db,
         })
         .await
         .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
