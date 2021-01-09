@@ -66,3 +66,6 @@ setup-virtualenv:
 # Tim's personal entrypoint for VSCODE. This way, it takes the freakin' DATABASE_URL env variable into account.
 code:
     code ./workspace.code-workspace
+
+sqlite:
+    sqlite3 ./var/lib/fh-http.db

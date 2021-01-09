@@ -6,68 +6,52 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use uuid::Uuid;
 
+pub trait AuditItem {}
+
 #[derive(Debug, Serialize, Deserialize)]
-pub enum AuditItem {
-    Request {
-        id: Uuid,
-        inc: usize,
-        conversation_id: Uuid,
-        payload: fh_core::request::Request,
-    },
-    Response {
-        id: Uuid,
-        conversation_id: Uuid,
-        request_id: Uuid,
-        payload: fh_core::response::Response,
-    },
-    Log {
-        id: Uuid,
-        conversation_id: Uuid,
-        payload: String,
-    },
+struct AuditItemRequest {
+    id: Uuid,
+    created_at: DateTime<Utc>,
+    inc: usize,
+    conversation_id: Uuid,
+    payload: fh_core::request::Request,
 }
 
-impl std::string::ToString for AuditItem {
-    fn to_string(&self) -> String {
-        match self {
-            AuditItem::Request { .. } => "request".to_string(),
-            AuditItem::Response { .. } => "response".to_string(),
-            AuditItem::Log { .. } => "log".to_string(),
-        }
-    }
+#[derive(Debug, Serialize, Deserialize)]
+struct AuditItemResponse {
+    id: Uuid,
+    created_at: DateTime<Utc>,
+    conversation_id: Uuid,
+    request_id: Uuid,
+    payload: fh_core::response::Response,
 }
 
-impl AuditItem {
-    fn get_parent(&self) -> Option<Uuid> {
-        match self {
-            AuditItem::Response { request_id, .. } => Some(*request_id),
-            _ => None,
-        }
-    }
+#[derive(Debug, Serialize, Deserialize)]
+struct AuditItemLog {
+    id: Uuid,
+    created_at: DateTime<Utc>,
+    conversation_id: Uuid,
+    payload: String,
+    items: AuditItems,
+}
 
-    fn get_conversation_id(&self) -> Uuid {
-        match self {
-            AuditItem::Request {
-                conversation_id, ..
-            } => *conversation_id,
-            AuditItem::Response {
-                conversation_id, ..
-            } => *conversation_id,
-            AuditItem::Log {
-                conversation_id, ..
-            } => *conversation_id,
-        }
-    }
+impl AuditItem for AuditItemLog {}
+impl AuditItem for AuditItemResponse {}
+impl AuditItem for AuditItemRequest {}
 
-    fn get_payload(&self) -> Result<String, RequestProcessorError> {
-        match self {
-            AuditItem::Request { payload, .. } => {
-                serde_json::to_string(&payload).map_err(RequestProcessorError::JsonSerialize)
-            }
-            AuditItem::Response { payload, .. } => {
-                serde_json::to_string(&payload).map_err(RequestProcessorError::JsonSerialize)
-            }
-            AuditItem::Log { payload, .. } => Ok(payload.to_owned()),
+#[derive(Debug, Serialize, Deserialize)]
+struct AuditItems {
+    requests: Vec<AuditItemRequest>,
+    responses: Vec<AuditItemResponse>,
+    logs: Vec<AuditItemLog>,
+}
+
+impl AuditItems {
+    fn new() -> Self {
+        Self {
+            requests: Vec::new(),
+            responses: Vec::new(),
+            logs: Vec::new(),
         }
     }
 }
@@ -77,7 +61,13 @@ pub struct RequestConversation {
     pub id: Uuid,
     created_at: chrono::DateTime<Utc>,
     request_processor_id: Uuid,
-    items: Vec<AuditItem>,
+    items: AuditItems,
+}
+
+impl RequestConversation {
+    fn get_items(&self) -> Result<AuditItems, RequestProcessorError> {
+        todo!()
+    }
 }
 
 pub(crate) async fn create_request_conversation(
@@ -106,7 +96,7 @@ pub(crate) async fn create_request_conversation(
         id: conversation_id,
         created_at: now,
         request_processor_id: *request_processor_id,
-        items: Vec::new(),
+        items: AuditItems::new(),
     })
 }
 
@@ -136,7 +126,7 @@ pub(crate) async fn get_request_conversation(
             id: *id,
             created_at: DateTime::parse_from_rfc3339(&row.created_at)?.with_timezone(&Utc),
             request_processor_id: Uuid::from_str(&row.request_processor)?,
-            items: Vec::new(),
+            items: AuditItems::new(),
         }),
     }
 }
@@ -144,13 +134,13 @@ pub(crate) async fn get_request_conversation(
 pub(crate) async fn get_audit_items(
     _conn: &mut DbConnection,
     conversation_id: &Uuid,
-) -> Result<Vec<AuditItem>, RequestProcessorError> {
+) -> Result<AuditItems, RequestProcessorError> {
     let _id_str = conversation_id.to_string();
     // let mut rows = sqlx::query("SELECT * FROM conversation_audit_log WHERE id = ?")
     //     .bind(id_str)
     //     .fetch(conn);
 
-    let items = Vec::new();
+    let items = AuditItems::new();
 
     // while let Some(row) = rows.try_next().await? {
     //     items.push(match row.try_get("kind")? {
@@ -173,10 +163,10 @@ pub(crate) async fn get_audit_items(
     Ok(items)
 }
 
-pub(crate) async fn create_audit_item(
+pub(crate) async fn create_audit_item<T: AuditItem>(
     conn: &mut DbConnection,
-    item: AuditItem,
-) -> Result<AuditItem, RequestProcessorError> {
+    item: T,
+) -> Result<T, RequestProcessorError> {
     let conv = get_request_conversation(conn, &item.get_conversation_id()).await?;
 
     let item_id = Uuid::new_v4();
