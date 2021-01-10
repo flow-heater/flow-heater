@@ -1,7 +1,9 @@
 pub(crate) mod admin;
+pub(crate) mod conversation;
 pub(crate) mod public;
 
 use crate::server::admin::filters::admin_filters;
+use crate::server::conversation::filters::conversation_filters;
 use crate::server::public::filters::public_filters;
 use fh_core::ReqSender;
 use fh_db::{ReqCmd, RequestProcessorError};
@@ -14,6 +16,12 @@ pub(crate) fn with_sender<T: Sync + Send>(
     tx: ReqSender<T>,
 ) -> impl Filter<Extract = (ReqSender<T>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || tx.clone())
+}
+
+pub(crate) fn with_prelude(
+    prelude: bool,
+) -> impl Filter<Extract = (bool,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || prelude)
 }
 
 #[derive(Serialize)]
@@ -89,6 +97,7 @@ async fn handle_rejections(err: Rejection) -> Result<impl Reply, std::convert::I
 pub(crate) async fn web_server(tx_db: ReqSender<ReqCmd>, tx_proc: ReqSender<ProcessorCmd>) {
     let routes = public_filters(tx_db.clone(), tx_proc.clone())
         .or(admin_filters(tx_db.clone()))
+        .or(conversation_filters(tx_db.clone()))
         .recover(handle_rejections);
 
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await

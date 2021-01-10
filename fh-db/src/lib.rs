@@ -1,7 +1,7 @@
 use self::request_processor::RequestProcessor;
 use anyhow::{Context, Error, Result};
 use fh_core::{DbPool, DbType, Responder, TypedPool};
-use request_conversation::RequestConversation;
+use request_conversation::{AuditItem, RequestConversation};
 use std::env;
 use thiserror::Error;
 use tokio::sync::mpsc;
@@ -26,6 +26,12 @@ pub enum RequestProcessorError {
     Processing(#[from] anyhow::Error),
     #[error("{0}")]
     Locking(String),
+    #[error(transparent)]
+    TimeParse(#[from] chrono::ParseError),
+    #[error("{0}")]
+    Custom(String),
+    #[error("{0}")]
+    EmptyDbField(String),
 }
 
 #[derive(Debug)]
@@ -50,6 +56,18 @@ pub enum ReqCmd {
     CreateRequestConversation {
         request_processor_id: Uuid,
         cmd_tx: Responder<Result<RequestConversation, RequestProcessorError>>,
+    },
+    CreateAuditLogEntry {
+        item: AuditItem,
+        cmd_tx: Responder<Result<AuditItem, RequestProcessorError>>,
+    },
+    GetRequestConversation {
+        id: Uuid,
+        cmd_tx: Responder<Result<RequestConversation, RequestProcessorError>>,
+    },
+    GetRequestConversationAuditItems {
+        id: Uuid,
+        cmd_tx: Responder<Result<Vec<AuditItem>, RequestProcessorError>>,
     },
 }
 
@@ -132,6 +150,34 @@ async fn process_command(cmd: ReqCmd, pool: &DbPool<DbType>) -> Result<()> {
 
             cmd_tx
                 .send(conv)
+                .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
+        }
+        ReqCmd::CreateAuditLogEntry { item, cmd_tx } => {
+            let item =
+                self::request_conversation::create_audit_item(&mut pool.acquire().await?, item)
+                    .await;
+
+            cmd_tx
+                .send(item)
+                .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
+        }
+        ReqCmd::GetRequestConversationAuditItems { id, cmd_tx } => {
+            let items =
+                self::request_conversation::get_audit_items(&mut pool.acquire().await?, &id).await;
+
+            cmd_tx
+                .send(items)
+                .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
+        }
+        ReqCmd::GetRequestConversation { id, cmd_tx } => {
+            let items = self::request_conversation::get_request_conversation(
+                &mut pool.acquire().await?,
+                &id,
+            )
+            .await;
+
+            cmd_tx
+                .send(items)
                 .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
         }
     }

@@ -100,7 +100,9 @@ def test_json_request_post(fh_http: FlowHeaterLayer):
 
 def test_json_request_post_x_www_form_urlencoded(fh_http: FlowHeaterLayer):
 
-    response = execute(basedir / "json-request-echo.js", method="post", data={"foo": "bar"})
+    response = execute(
+        basedir / "json-request-echo.js", method="post", data={"foo": "bar"}
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -117,7 +119,9 @@ def test_json_request_post_x_www_form_urlencoded(fh_http: FlowHeaterLayer):
 
 def test_json_request_post_json(fh_http: FlowHeaterLayer):
 
-    response = execute(basedir / "json-request-echo.js", method="post", json={"foo": "bar"})
+    response = execute(
+        basedir / "json-request-echo.js", method="post", json={"foo": "bar"}
+    )
 
     assert response.status_code == 200
     data = response.json()

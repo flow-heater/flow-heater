@@ -9,7 +9,7 @@ def test_spike(fh_http: ServerLayer):
 
     # Check HTTP response.
     assert data["code"] == 200
-    assert data["headers"] == {}
+    assert "fh-conversation-id" in response.headers
     assert data["body"] == [
         116,
         104,

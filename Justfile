@@ -62,3 +62,10 @@ setup-virtualenv:
         {{pip}} install --upgrade pip
         {{pip}} install --requirement tests/requirements.txt
     fi
+
+# Tim's personal entrypoint for VSCODE. This way, it takes the freakin' DATABASE_URL env variable into account.
+code:
+    code ./workspace.code-workspace
+
+sqlite:
+    sqlite3 ./var/lib/fh-http.db
