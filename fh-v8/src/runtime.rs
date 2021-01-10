@@ -58,11 +58,7 @@ async fn op_log(
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
     tx_db2
         .send(ReqCmd::CreateAuditLogEntry {
-            item: fh_db::request_conversation::AuditItem::Log {
-                id: Uuid::new_v4(),
-                conversation_id,
-                payload: log_entry.clone(),
-            },
+            item: fh_db::request_conversation::AuditItem::new_log(conversation_id, log_entry),
             cmd_tx: cmd_tx2,
         })
         .await
@@ -106,12 +102,11 @@ async fn op_dispatch_request(
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
     tx_db2
         .send(ReqCmd::CreateAuditLogEntry {
-            item: fh_db::request_conversation::AuditItem::Request {
-                id: Uuid::new_v4(),
+            item: fh_db::request_conversation::AuditItem::new_request(
                 conversation_id,
-                inc: old_inc,
-                payload: request_spec.clone().request,
-            },
+                old_inc as i32,
+                request_spec.request.clone(),
+            ),
             cmd_tx: cmd_tx2,
         })
         .await

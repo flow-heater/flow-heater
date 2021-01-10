@@ -18,6 +18,12 @@ pub(crate) fn with_sender<T: Sync + Send>(
     warp::any().map(move || tx.clone())
 }
 
+pub(crate) fn with_prelude(
+    prelude: bool,
+) -> impl Filter<Extract = (bool,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || prelude)
+}
+
 #[derive(Serialize)]
 struct ErrorMessage {
     code: u16,

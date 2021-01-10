@@ -1,4 +1,6 @@
 pytest
 requests
 lovely-testlayers
+dacite
+python-dateutil
 black

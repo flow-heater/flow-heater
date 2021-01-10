@@ -30,6 +30,8 @@ pub enum RequestProcessorError {
     TimeParse(#[from] chrono::ParseError),
     #[error("{0}")]
     Custom(String),
+    #[error("{0}")]
+    EmptyDbField(String),
 }
 
 #[derive(Debug)]
@@ -59,7 +61,11 @@ pub enum ReqCmd {
         item: AuditItem,
         cmd_tx: Responder<Result<AuditItem, RequestProcessorError>>,
     },
-    GetConversationItems {
+    GetRequestConversation {
+        id: Uuid,
+        cmd_tx: Responder<Result<RequestConversation, RequestProcessorError>>,
+    },
+    GetRequestConversationAuditItems {
         id: Uuid,
         cmd_tx: Responder<Result<Vec<AuditItem>, RequestProcessorError>>,
     },
@@ -155,9 +161,20 @@ async fn process_command(cmd: ReqCmd, pool: &DbPool<DbType>) -> Result<()> {
                 .send(item)
                 .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
         }
-        ReqCmd::GetConversationItems { id, cmd_tx } => {
+        ReqCmd::GetRequestConversationAuditItems { id, cmd_tx } => {
             let items =
                 self::request_conversation::get_audit_items(&mut pool.acquire().await?, &id).await;
+
+            cmd_tx
+                .send(items)
+                .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?;
+        }
+        ReqCmd::GetRequestConversation { id, cmd_tx } => {
+            let items = self::request_conversation::get_request_conversation(
+                &mut pool.acquire().await?,
+                &id,
+            )
+            .await;
 
             cmd_tx
                 .send(items)

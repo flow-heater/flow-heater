@@ -38,6 +38,7 @@ pub enum ProcessorCmd {
         request: Request,
         cmd_tx: Responder<Result<Response, RequestProcessorError>>,
         tx_db: ReqSender<ReqCmd>,
+        prelude: bool,
     },
 }
 
@@ -105,6 +106,7 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
             request,
             cmd_tx,
             tx_db,
+            prelude,
         } => {
             let conversation_res = create_request_conversation(tx_db.clone(), id).await;
             let conversation_id = match conversation_res {
@@ -137,11 +139,13 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
                 Ok(req_proc) => req_proc,
             };
 
+            if prelude {}
+
             let r = process_request(
                 tx_db.clone(),
                 request,
                 conversation_id,
-                request_processor.code,
+                prepare_user_code(&request_processor.code, prelude),
             )
             .await
             .map_err(RequestProcessorError::Processing);
