@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import Union
+
 import requests
 from dacite import from_dict
 
@@ -25,14 +28,15 @@ class RequestConversation:
     audit_items: List[AuditItem]
 
 
-def read_code(filename) -> str:
-    with open(filename, "r") as f:
-        return f.read()
+def read_code(filename_or_code: Union[Path, str]) -> str:
+    if isinstance(filename_or_code, Path):
+        with open(filename_or_code, "r") as f:
+            return f.read()
+    else:
+        return filename_or_code
 
 
-def create_processor(filename) -> str:
-
-    code = read_code(filename)
+def create_processor(code: str):
 
     rp = RequestProcessor(
         id=None,
@@ -63,9 +67,13 @@ def run_processor(
     return response
 
 
-def execute(filename, method="get", prelude=False, **kwargs) -> requests.Response:
-    identifier = create_processor(filename)
+def execute(filename_or_code: Union[Path, str], method="get", prelude=False, **kwargs):
+
+    code = read_code(filename_or_code)
+
+    identifier = create_processor(code)
     response = run_processor(identifier, method=method, prelude=prelude, **kwargs)
+
     return response
 
 

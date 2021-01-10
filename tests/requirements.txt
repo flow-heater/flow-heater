@@ -1,6 +1,11 @@
+# Testing
 pytest
 requests
+responses
 lovely-testlayers
 dacite
 python-dateutil
+
+# Code style
 black
+isort
