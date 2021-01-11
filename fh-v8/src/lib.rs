@@ -2,16 +2,13 @@ mod runtime;
 
 use crate::runtime::{prepare_runtime, prepare_user_code};
 use anyhow::{Error, Result};
-use fh_core::{
-    request::{Request, RequestList},
-    response::Response,
-    ReqSender, Responder,
-};
+use fh_core::{request::Request, response::Response, ReqSender, Responder};
 use fh_db::{
     request_conversation::RequestConversation,
     request_processor::{RequestProcessor, RequestProcessorLanguage, RequestProcessorRuntime},
     ReqCmd, RequestProcessorError,
 };
+use runtime::RuntimeState;
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
@@ -246,7 +243,7 @@ pub async fn process_request(
     // extract the requests
     let state = js_runtime.op_state();
     let op_state = state.borrow();
-    let requests = op_state.borrow::<RequestList>();
+    let rt_state = op_state.borrow::<RuntimeState>();
 
     // println!("Requests: {:?}", requests);
 
@@ -260,7 +257,8 @@ pub async fn process_request(
         code: 200,
         headers: response_headers,
         body: Some(
-            requests
+            rt_state
+                .request_list
                 .iter()
                 .last()
                 .cloned()
