@@ -1,3 +1,7 @@
+// import this first, to have the macros available
+#[macro_use]
+mod util;
+
 pub(crate) mod admin;
 pub(crate) mod conversation;
 pub(crate) mod public;
