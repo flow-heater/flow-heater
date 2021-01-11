@@ -94,26 +94,19 @@ pub(crate) mod handlers {
         prelude: bool,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let mut tx2 = tx_proc
-            .lock()
-            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
-            .clone();
-
         let (cmd_tx, cmd_rx) = oneshot::channel();
-        tx2.send(ProcessorCmd::RunRequestProcessor {
-            id,
-            request,
-            cmd_tx,
+        let res = execute_command!(
             tx_db,
-            prelude,
-        })
-        .await
-        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
-
-        let res = cmd_rx
-            .await
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+            tx_proc,
+            ProcessorCmd::RunRequestProcessor {
+                id,
+                request,
+                cmd_tx,
+                tx_db,
+                prelude,
+            },
+            cmd_rx
+        );
 
         Ok(warp::reply::with_header(
             warp::reply::json(&res),
@@ -132,24 +125,17 @@ pub(crate) mod handlers {
         tx_proc: ReqSender<ProcessorCmd>,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let mut tx2 = tx_proc
-            .lock()
-            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
-            .clone();
-
         let (resp_tx, resp_rx) = oneshot::channel();
-        tx2.send(ProcessorCmd::Http {
-            request,
-            cmd_tx: resp_tx,
+        let res = execute_command!(
             tx_db,
-        })
-        .await
-        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
-
-        let res = resp_rx
-            .await
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+            tx_proc,
+            ProcessorCmd::Http {
+                request,
+                cmd_tx: resp_tx,
+                tx_db,
+            },
+            resp_rx
+        );
 
         Ok(warp::reply::with_header(
             warp::reply::json(&res),

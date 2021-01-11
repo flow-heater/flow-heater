@@ -64,23 +64,15 @@ pub(crate) mod handlers {
         tx: ReqSender<ReqCmd>,
         processor: RequestProcessor,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut tx2 = tx
-            .lock()
-            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
-            .clone();
-
-        let (resp_tx, resp_rx) = oneshot::channel();
-        tx2.send(ReqCmd::CreateRequestProcessor {
-            proc: processor.clone(),
-            cmd_tx: resp_tx,
-        })
-        .await
-        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
-
-        let res = resp_rx
-            .await
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+        let (cmd_tx, cmd_rx) = oneshot::channel();
+        let res = execute_command!(
+            tx,
+            ReqCmd::CreateRequestProcessor {
+                proc: processor.clone(),
+                cmd_tx,
+            },
+            cmd_rx
+        );
 
         Ok(warp::reply::json(&res))
     }
@@ -89,23 +81,8 @@ pub(crate) mod handlers {
         id: Uuid,
         tx: ReqSender<ReqCmd>,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut tx2 = tx
-            .lock()
-            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
-            .clone();
-
-        let (resp_tx, resp_rx) = oneshot::channel();
-        tx2.send(ReqCmd::GetRequestProcessor {
-            id,
-            cmd_tx: resp_tx,
-        })
-        .await
-        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
-
-        let proc = resp_rx
-            .await
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+        let (cmd_tx, cmd_rx) = oneshot::channel();
+        let proc = execute_command!(tx, ReqCmd::GetRequestProcessor { id, cmd_tx }, cmd_rx);
 
         Ok(warp::reply::json(&proc))
     }
@@ -115,24 +92,16 @@ pub(crate) mod handlers {
         tx: ReqSender<ReqCmd>,
         processor: RequestProcessor,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut tx2 = tx
-            .lock()
-            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
-            .clone();
-
-        let (resp_tx, resp_rx) = oneshot::channel();
-        tx2.send(ReqCmd::UpdateRequestProcessor {
-            id,
-            proc: processor.clone(),
-            cmd_tx: resp_tx,
-        })
-        .await
-        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
-
-        let res = resp_rx
-            .await
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+        let (cmd_tx, cmd_rx) = oneshot::channel();
+        let res = execute_command!(
+            tx,
+            ReqCmd::UpdateRequestProcessor {
+                id,
+                proc: processor.clone(),
+                cmd_tx,
+            },
+            cmd_rx
+        );
 
         Ok(warp::reply::json(&res))
     }
@@ -141,23 +110,8 @@ pub(crate) mod handlers {
         id: Uuid,
         tx: ReqSender<ReqCmd>,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut tx2 = tx
-            .lock()
-            .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
-            .clone();
-
-        let (resp_tx, resp_rx) = oneshot::channel();
-        tx2.send(ReqCmd::DeleteRequestProcessor {
-            id,
-            cmd_tx: resp_tx,
-        })
-        .await
-        .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
-
-        let _res = resp_rx
-            .await
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?
-            .map_err(|e| warp::reject::custom(FhHttpError::new(e)))?;
+        let (cmd_tx, cmd_rx) = oneshot::channel();
+        execute_command!(tx, ReqCmd::DeleteRequestProcessor { id, cmd_tx }, cmd_rx);
 
         Ok(warp::reply())
     }
