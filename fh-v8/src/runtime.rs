@@ -15,7 +15,14 @@ use std::{cell::RefCell, rc::Rc};
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
-struct RequestCounter(usize);
+pub(crate) struct RuntimeState {
+    pub(crate) counter: RequestCounter,
+    pub(crate) tx_db: ReqSender<ReqCmd>,
+    pub(crate) request: Request,
+    pub(crate) request_list: RequestList,
+    pub(crate) conversation_id: Uuid,
+}
+pub(crate) struct RequestCounter(usize);
 
 impl RequestCounter {
     fn increment(&mut self) -> usize {
@@ -30,8 +37,8 @@ fn op_get_request(
     _args: Value,
     _bufs: &mut [ZeroCopyBuf],
 ) -> Result<Value, AnyError> {
-    let r = state.borrow::<Request>();
-    Ok(serde_json::json!(r))
+    let r = state.borrow::<RuntimeState>();
+    Ok(serde_json::json!(r.request))
 }
 
 async fn op_log(
@@ -46,11 +53,11 @@ async fn op_log(
         ))?
         .to_string();
 
-    let mut op_state = state.borrow_mut();
-    let conversation_id = op_state.borrow::<Uuid>().clone();
+    let op_state = state.borrow();
+    let rt_state = op_state.borrow::<RuntimeState>();
 
-    let x = op_state.borrow_mut::<ReqSender<ReqCmd>>();
-    let mut tx_db2 = x
+    let mut tx_db2 = rt_state
+        .tx_db
         .lock()
         .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
         .clone();
@@ -58,7 +65,10 @@ async fn op_log(
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
     tx_db2
         .send(ReqCmd::CreateAuditLogEntry {
-            item: fh_db::request_conversation::AuditItem::new_log(conversation_id, log_entry),
+            item: fh_db::request_conversation::AuditItem::new_log(
+                rt_state.conversation_id,
+                log_entry,
+            ),
             cmd_tx: cmd_tx2,
         })
         .await
@@ -75,26 +85,14 @@ async fn op_dispatch_request(
     _bufs: BufVec,
 ) -> Result<Value, AnyError> {
     let request_spec: RequestSpec = serde_json::from_value(args)?;
+
     let mut op_state = state.borrow_mut();
-    op_state
-        .borrow_mut::<RequestList>()
-        .push(request_spec.request.clone());
 
-    let old_inc = op_state.borrow_mut::<RequestCounter>().increment();
+    let rt_state = op_state.borrow_mut::<RuntimeState>();
+    rt_state.request_list.push(request_spec.request.clone());
 
-    // TODO: check if we could have multiple Uuid's in the Gotham Store via Type Aliases
-    // ```rust
-    // type ConversationId = Uuid;
-    // type RequestProcessorId = Uuid;
-    // let conversation_id = op_state.borrow::<ConversationId>().clone();
-    // let request_proc_id = op_state.borrow::<RequestProcessorId>().clone();
-    // ```
-    // A better alternative could actually be to offer one structure of our own which we
-    // put into the GothamStore which we use for reading+writing.
-    let conversation_id = op_state.borrow::<Uuid>().clone();
-
-    let x = op_state.borrow_mut::<ReqSender<ReqCmd>>();
-    let mut tx_db2 = x
+    let mut tx_db2 = rt_state
+        .tx_db
         .lock()
         .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
         .clone();
@@ -103,8 +101,8 @@ async fn op_dispatch_request(
     tx_db2
         .send(ReqCmd::CreateAuditLogEntry {
             item: fh_db::request_conversation::AuditItem::new_request(
-                conversation_id,
-                old_inc as i32,
+                rt_state.conversation_id,
+                rt_state.counter.increment() as i32,
                 request_spec.request.clone(),
             ),
             cmd_tx: cmd_tx2,
@@ -138,7 +136,7 @@ async fn op_dispatch_request(
 
 pub(crate) fn prepare_runtime(
     tx_db: ReqSender<ReqCmd>,
-    req: Request,
+    request: Request,
     conversation_id: Uuid,
 ) -> JsRuntime {
     let mut js_runtime = JsRuntime::new(Default::default());
@@ -157,21 +155,13 @@ pub(crate) fn prepare_runtime(
     js_runtime
         .op_state()
         .borrow_mut()
-        .put::<Uuid>(conversation_id);
-    js_runtime
-        .op_state()
-        .borrow_mut()
-        .put::<ReqSender<ReqCmd>>(tx_db);
-    js_runtime.op_state().borrow_mut().put::<Request>(req);
-    js_runtime
-        .op_state()
-        .borrow_mut()
-        .put::<RequestCounter>(RequestCounter(0));
-    js_runtime
-        .op_state()
-        .borrow_mut()
-        .put::<RequestList>(RequestList { inner: Vec::new() });
-
+        .put::<RuntimeState>(RuntimeState {
+            counter: RequestCounter(0),
+            tx_db,
+            request,
+            request_list: RequestList { inner: Vec::new() },
+            conversation_id,
+        });
     js_runtime
 }
 
