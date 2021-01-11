@@ -56,26 +56,18 @@ async fn op_log(
     let op_state = state.borrow();
     let rt_state = op_state.borrow::<RuntimeState>();
 
-    let mut tx_db2 = rt_state
-        .tx_db
-        .lock()
-        .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
-        .clone();
-
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
-    tx_db2
-        .send(ReqCmd::CreateAuditLogEntry {
+    execute_command!(
+        rt_state.tx_db,
+        ReqCmd::CreateAuditLogEntry {
             item: fh_db::request_conversation::AuditItem::new_log(
                 rt_state.conversation_id,
                 log_entry,
             ),
             cmd_tx: cmd_tx2,
-        })
-        .await
-        .map_err(anyhow::Error::new)?;
-
-    // HINT: never omit awaiting here... this leads to runtime hangs!
-    cmd_rx2.await??;
+        },
+        cmd_rx2
+    );
 
     Ok(serde_json::json!(()))
 }
@@ -91,24 +83,19 @@ async fn op_dispatch_request(
     let rt_state = op_state.borrow_mut::<RuntimeState>();
     rt_state.request_list.push(request_spec.request.clone());
 
-    let mut tx_db2 = rt_state
-        .tx_db
-        .lock()
-        .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
-        .clone();
-
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
-    tx_db2
-        .send(ReqCmd::CreateAuditLogEntry {
+    execute_command!(
+        rt_state.tx_db,
+        ReqCmd::CreateAuditLogEntry {
             item: fh_db::request_conversation::AuditItem::new_request(
                 rt_state.conversation_id,
                 rt_state.counter.increment() as i32,
                 request_spec.request.clone(),
             ),
             cmd_tx: cmd_tx2,
-        })
-        .await
-        .map_err(anyhow::Error::new)?;
+        },
+        cmd_rx2
+    );
 
     // TODO: this is the part, where we need to:
     // - convert the fh_v8::Request to a http::Request
@@ -127,9 +114,6 @@ async fn op_dispatch_request(
 
     // TODO: this is the point, where also the AuditEntry::Response needs to be
     // created in the DB
-
-    // HINT: never omit awaiting here... this leads to runtime hangs!
-    cmd_rx2.await??;
 
     Ok(serde_json::json!(()))
 }

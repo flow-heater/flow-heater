@@ -1,3 +1,5 @@
+#[macro_use]
+mod util;
 mod runtime;
 
 use crate::runtime::{prepare_runtime, prepare_user_code};
