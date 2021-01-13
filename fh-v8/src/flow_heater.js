@@ -8,4 +8,13 @@ async function main(fh, request) {
 
     await fh.dispatch_request("http://httpbin.org/anything", request);
     await fh.log("Hello from Deno!");
+
+    await fh.respond_with({
+        code: 204,
+        headers: {
+            "content-type": ["application/xml"],
+        },
+        body: "xxx",
+        version: "HTTP/1.1",
+    })
 }

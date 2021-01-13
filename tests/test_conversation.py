@@ -27,9 +27,9 @@ def test_audit_item_logging(fh_http: FlowHeaterLayer):
     conversation_id = response.headers["fh-conversation-id"]
 
     (conversation, _response_conv) = get_request_conversation(conversation_id)
-    assert 2 == len(conversation.audit_items)
-    assert '"Hello, World"' == conversation.audit_items[0].payload
-    assert '"Body is: "' == conversation.audit_items[1].payload
+    assert 3 == len(conversation.audit_items)
+    assert '"Hello, World"' == conversation.audit_items[1].payload
+    assert '"Body is: "' == conversation.audit_items[2].payload
 
 
 def test_audit_item_request(fh_http: FlowHeaterLayer):
@@ -39,11 +39,14 @@ def test_audit_item_request(fh_http: FlowHeaterLayer):
     conversation_id = response.headers["fh-conversation-id"]
 
     (conversation, _response_conv) = get_request_conversation(conversation_id)
-    assert 2 == len(conversation.audit_items)
+    assert 3 == len(conversation.audit_items)
     assert "request" == conversation.audit_items[0].kind
     assert "" == conversation.audit_items[0].payload["body"]
     assert "GET" == conversation.audit_items[0].payload["method"]
     assert None == conversation.audit_items[0].payload["query"]
 
-    assert "response" == conversation.audit_items[1].kind
-    assert 0 < len(conversation.audit_items[1].payload["body"])
+    assert "request" == conversation.audit_items[1].kind
+    assert 0 == len(conversation.audit_items[1].payload["body"])
+
+    assert "response" == conversation.audit_items[2].kind
+    assert 0 == len(conversation.audit_items[1].payload["body"])

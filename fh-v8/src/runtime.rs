@@ -20,8 +20,10 @@ pub(crate) struct RuntimeState {
     pub(crate) counter: RequestCounter,
     pub(crate) tx_db: ReqSender<ReqCmd>,
     pub(crate) request: Request,
+    pub(crate) request_audit_id: Uuid,
     pub(crate) request_list: RequestList,
     pub(crate) conversation_id: Uuid,
+    pub(crate) final_response: Option<Response>,
 }
 pub(crate) struct RequestCounter(usize);
 
@@ -40,6 +42,34 @@ fn op_get_request(
 ) -> Result<Value, AnyError> {
     let r = state.borrow::<RuntimeState>();
     Ok(serde_json::json!(r.request))
+}
+
+async fn op_respond_with(
+    state: Rc<RefCell<OpState>>,
+    args: Value,
+    _bufs: BufVec,
+) -> Result<Value, AnyError> {
+    let response: Response = serde_json::from_value(args)?;
+    let mut op_state = state.borrow_mut();
+    let rt_state = op_state.borrow_mut::<RuntimeState>();
+
+    rt_state.final_response = Some(response.clone());
+
+    let (cmd_tx3, cmd_rx3) = oneshot::channel();
+    execute_command!(
+        rt_state.tx_db,
+        ReqCmd::CreateAuditLogEntry {
+            item: fh_db::request_conversation::AuditItem::new_response(
+                rt_state.conversation_id,
+                rt_state.request_audit_id,
+                response,
+            ),
+            cmd_tx: cmd_tx3,
+        },
+        cmd_rx3
+    );
+
+    Ok(serde_json::json!(()))
 }
 
 async fn op_log(
@@ -80,7 +110,6 @@ async fn op_dispatch_request(
     let request_spec: RequestSpec = serde_json::from_value(args)?;
 
     let mut op_state = state.borrow_mut();
-
     let rt_state = op_state.borrow_mut::<RuntimeState>();
     rt_state.request_list.push(request_spec.request.clone());
 
@@ -131,6 +160,7 @@ pub(crate) fn prepare_runtime(
     tx_db: ReqSender<ReqCmd>,
     request: Request,
     conversation_id: Uuid,
+    request_audit_id: Uuid,
 ) -> JsRuntime {
     let mut js_runtime = JsRuntime::new(Default::default());
 
@@ -139,6 +169,7 @@ pub(crate) fn prepare_runtime(
         deno_core::json_op_async(op_dispatch_request),
     );
     js_runtime.register_op("fh_log", deno_core::json_op_async(op_log));
+    js_runtime.register_op("respond_with", deno_core::json_op_async(op_respond_with));
     js_runtime.register_op("get_request", deno_core::json_op_sync(op_get_request));
     js_runtime.register_op(
         "op_resources",
@@ -149,11 +180,13 @@ pub(crate) fn prepare_runtime(
         .op_state()
         .borrow_mut()
         .put::<RuntimeState>(RuntimeState {
-            counter: RequestCounter(0),
+            counter: RequestCounter(1),
             tx_db,
             request,
             request_list: RequestList { inner: Vec::new() },
             conversation_id,
+            request_audit_id,
+            final_response: None,
         });
     js_runtime
 }

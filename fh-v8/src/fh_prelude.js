@@ -27,6 +27,10 @@ class Fh {
         return await Deno.core.jsonOpAsync("dispatch_request", spec);
     };
 
+    async respond_with(response) {
+        return await Deno.core.jsonOpAsync("respond_with", response);
+    };
+
     get_request() {
         return Deno.core.jsonOpSync("get_request", []);
     };

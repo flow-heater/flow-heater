@@ -8,9 +8,10 @@ def test_spike(fh_http: ServerLayer):
     data = response.json()
 
     # Check HTTP response.
-    assert data["code"] == 200
+    assert data["code"] == 204
     assert "fh-conversation-id" in response.headers
-    assert data["body"] == "this is the patched body"
+    assert data["body"] == "xxx"
+    assert data["headers"]["content-type"][0] == "application/xml"
 
     # Check STDOUT for fun.
     fh_http.stdout.seek(0)
