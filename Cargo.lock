@@ -356,6 +356,7 @@ name = "fh-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "reqwest",
  "serde",
  "sqlx",
  "tokio",

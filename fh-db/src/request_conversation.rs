@@ -38,6 +38,14 @@ pub enum AuditItem {
 }
 
 impl AuditItem {
+    pub fn get_id(&self) -> Uuid {
+        match self {
+            Self::Response { id, .. } => *id,
+            Self::Request { id, .. } => *id,
+            Self::Log { id, .. } => *id,
+        }
+    }
+
     pub fn new_request(
         conversation_id: Uuid,
         inc: i32,
@@ -101,7 +109,12 @@ impl AuditItem {
                 conversation_id: item.conversation_id,
                 payload: item.payload.clone(),
             },
-            _ => todo!(),
+            s => {
+                return Err(RequestProcessorError::Custom(format!(
+                    "Unsupported AuditItem type: '{}'",
+                    s
+                )))
+            }
         })
     }
 
@@ -248,6 +261,8 @@ pub async fn get_audit_items(
             .fetch(conn);
 
     while let Some(row) = rows.try_next().await? {
+        let req_id: Option<String> = row.try_get("parent")?;
+
         let i = DbAuditItem {
             id: Uuid::from_str(row.try_get("id")?)?,
             kind: row.try_get("kind")?,
@@ -255,9 +270,7 @@ pub async fn get_audit_items(
             conversation_id: Uuid::from_str(row.try_get("request_conversation")?)?,
             inc: row.try_get("inc")?,
             payload: row.try_get("payload")?,
-            // TODO: this won't work yet, because this is an Option<Uuid>
-            // and we do not use `Uuid::from_str()`, yet
-            request_id: row.try_get("parent")?,
+            request_id: req_id.and_then(|x| Uuid::from_str(&x).ok()),
         };
 
         items.push(AuditItem::from_db_audit_item(&i)?);
@@ -292,6 +305,7 @@ pub(crate) async fn create_audit_item(
     let conv_id_str = conv.id.to_string();
     let created_at = Utc::now().to_rfc3339();
     let payload = db_item.payload;
+    let request_id_str = db_item.request_id.and_then(|x| Some(x.to_string()));
 
     sqlx::query!(
         r#"INSERT INTO conversation_audit_item
@@ -302,7 +316,7 @@ pub(crate) async fn create_audit_item(
         created_at,
         db_item.inc,
         conv_id_str,
-        db_item.request_id,
+        request_id_str,
         payload,
     )
     .execute(conn)

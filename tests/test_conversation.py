@@ -39,7 +39,11 @@ def test_audit_item_request(fh_http: FlowHeaterLayer):
     conversation_id = response.headers["fh-conversation-id"]
 
     (conversation, _response_conv) = get_request_conversation(conversation_id)
-    assert 1 == len(conversation.audit_items)
+    assert 2 == len(conversation.audit_items)
+    assert "request" == conversation.audit_items[0].kind
     assert "" == conversation.audit_items[0].payload["body"]
     assert "GET" == conversation.audit_items[0].payload["method"]
-    assert "" == conversation.audit_items[0].payload["query"]
+    assert None == conversation.audit_items[0].payload["query"]
+
+    assert "response" == conversation.audit_items[1].kind
+    assert 0 < len(conversation.audit_items[1].payload["body"])

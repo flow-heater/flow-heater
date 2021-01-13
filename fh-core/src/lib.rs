@@ -1,8 +1,15 @@
 use sqlx::{pool::PoolConnection, Pool, Sqlite, SqlitePool};
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 use tokio::sync::oneshot::error::RecvError;
 use tokio::sync::{mpsc, oneshot};
-use warp::reject::Reject;
+use warp::{
+    http::{self, HeaderValue},
+    hyper::HeaderMap,
+    reject::Reject,
+};
 
 pub mod request;
 pub mod response;
@@ -42,3 +49,30 @@ impl<T> FhProcessorError<T> {
 impl Reject for FhProcessorError<String> {}
 impl Reject for FhProcessorError<anyhow::Error> {}
 impl Reject for FhProcessorError<RecvError> {}
+
+fn try_header_map_to_hashmap(
+    hm: HeaderMap<HeaderValue>,
+) -> Result<HashMap<String, Vec<String>>, anyhow::Error> {
+    let mut res: HashMap<String, Vec<String>> = HashMap::new();
+    hm.keys().for_each(|k| {
+        hm.get_all(k).into_iter().for_each(|v| {
+            res.entry(k.to_string())
+                .and_modify(|e| e.push(v.to_str().unwrap_or("").to_string()))
+                .or_insert(vec![v.to_str().unwrap_or("").to_string()]);
+        })
+    });
+
+    Ok(res)
+}
+
+fn version_to_string(v: http::Version) -> String {
+    match v {
+        http::Version::HTTP_09 => "HTTP/0.9",
+        http::Version::HTTP_10 => "HTTP/1.0",
+        http::Version::HTTP_11 => "HTTP/1.1",
+        http::Version::HTTP_2 => "HTTP/2",
+        http::Version::HTTP_3 => "HTTP/3",
+        _ => unreachable!(),
+    }
+    .to_string()
+}

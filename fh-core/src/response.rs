@@ -1,12 +1,15 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom};
-use warp::http;
+use std::collections::HashMap;
+use std::str;
 
-#[derive(Debug, Serialize, Deserialize)]
+use crate::{try_header_map_to_hashmap, version_to_string};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Response {
-    pub code: usize,
-    pub headers: HashMap<String, String>,
-    pub body: Option<Vec<u8>>,
+    pub code: u16,
+    pub headers: HashMap<String, Vec<String>>,
+    pub body: Option<String>,
+    pub version: String,
 }
 
 impl Response {
@@ -15,10 +18,17 @@ impl Response {
     }
 }
 
-impl TryFrom<http::Response<Vec<u8>>> for Response {
-    type Error = anyhow::Error;
+impl Response {
+    pub async fn try_from_response(resp: reqwest::Response) -> Result<Self, anyhow::Error> {
+        let mut r = Response {
+            code: resp.status().as_u16(),
+            body: None,
+            headers: try_header_map_to_hashmap(resp.headers().clone())?,
+            version: version_to_string(resp.version()),
+        };
 
-    fn try_from(_value: http::Response<Vec<u8>>) -> Result<Self, Self::Error> {
-        todo!()
+        r.body = Some(String::from_utf8(resp.bytes().await?.to_vec())?);
+
+        Ok(r)
     }
 }

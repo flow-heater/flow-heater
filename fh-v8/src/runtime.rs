@@ -5,6 +5,7 @@ use deno_core::ZeroCopyBuf;
 use deno_core::{error::AnyError, BufVec};
 use fh_core::{
     request::{Request, RequestList, RequestSpec},
+    response::Response,
     ReqSender,
 };
 use fh_db::{ReqCmd, RequestProcessorError};
@@ -84,7 +85,7 @@ async fn op_dispatch_request(
     rt_state.request_list.push(request_spec.request.clone());
 
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
-    execute_command!(
+    let req_audit_item = execute_command!(
         rt_state.tx_db,
         ReqCmd::CreateAuditLogEntry {
             item: fh_db::request_conversation::AuditItem::new_request(
@@ -97,12 +98,8 @@ async fn op_dispatch_request(
         cmd_rx2
     );
 
-    // TODO: this is the part, where we need to:
-    // - convert the fh_v8::Request to a http::Request
-    // - convert the http::Response to a fh_v8::Response
-    // This is basically described in: https://github.com/flow-heater/fh-core/issues/25
     let c = reqwest::Client::builder().build()?;
-    let _response = c
+    let response: reqwest::Response = c
         .request(
             Method::from_str(&request_spec.request.method)?,
             Url::parse(&request_spec.url)?,
@@ -112,10 +109,22 @@ async fn op_dispatch_request(
         .send()
         .await?;
 
-    // TODO: this is the point, where also the AuditEntry::Response needs to be
-    // created in the DB
+    let r = Response::try_from_response(response).await?;
+    let (cmd_tx3, cmd_rx3) = oneshot::channel();
+    execute_command!(
+        rt_state.tx_db,
+        ReqCmd::CreateAuditLogEntry {
+            item: fh_db::request_conversation::AuditItem::new_response(
+                rt_state.conversation_id,
+                req_audit_item.get_id(),
+                r.clone(),
+            ),
+            cmd_tx: cmd_tx3,
+        },
+        cmd_rx3
+    );
 
-    Ok(serde_json::json!(()))
+    Ok(serde_json::json!(r))
 }
 
 pub(crate) fn prepare_runtime(

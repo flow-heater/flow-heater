@@ -252,13 +252,13 @@ pub async fn process_request(
     let mut response_headers = HashMap::new();
     response_headers.insert(
         "FH-Conversation-Id".to_string(),
-        conversation_id.to_string(),
+        vec![conversation_id.to_string()],
     );
 
     Ok(Response {
         code: 200,
         headers: response_headers,
-        body: Some(
+        body: Some(String::from_utf8(
             rt_state
                 .request_list
                 .iter()
@@ -268,6 +268,7 @@ pub async fn process_request(
                 .body
                 .as_bytes()
                 .to_vec(),
-        ),
+        )?),
+        version: "HTTP/1.1".to_string(), // TODO: fill that with something useful
     })
 }

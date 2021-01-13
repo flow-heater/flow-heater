@@ -10,6 +10,6 @@ macro_rules! execute_command {
 
         // HINT: never omit awaiting here... this leads to runtime hangs!
         // TODO: error handling?
-        $cmd_rx.await??;
+        $cmd_rx.await??
     }};
 }
