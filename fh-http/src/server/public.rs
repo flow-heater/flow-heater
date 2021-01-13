@@ -115,7 +115,8 @@ pub(crate) mod handlers {
                 .get("FH-Conversation-Id")
                 .ok_or(warp::reject::custom(FhHttpError::new(anyhow::Error::msg(
                     "Missing response header 'FH-Conversation-Id'.",
-                ))))?,
+                ))))?[0]
+                .clone(),
         ))
     }
 
@@ -144,7 +145,8 @@ pub(crate) mod handlers {
                 .get("FH-Conversation-Id")
                 .ok_or(warp::reject::custom(FhHttpError::new(anyhow::Error::msg(
                     "Missing response header 'FH-Conversation-Id'.",
-                ))))?,
+                ))))?[0]
+                .clone(),
         ))
     }
 }

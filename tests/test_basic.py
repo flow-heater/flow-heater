@@ -10,32 +10,7 @@ def test_spike(fh_http: ServerLayer):
     # Check HTTP response.
     assert data["code"] == 200
     assert "fh-conversation-id" in response.headers
-    assert data["body"] == [
-        116,
-        104,
-        105,
-        115,
-        32,
-        105,
-        115,
-        32,
-        116,
-        104,
-        101,
-        32,
-        112,
-        97,
-        116,
-        99,
-        104,
-        101,
-        100,
-        32,
-        98,
-        111,
-        100,
-        121,
-    ]
+    assert data["body"] == "this is the patched body"
 
     # Check STDOUT for fun.
     fh_http.stdout.seek(0)

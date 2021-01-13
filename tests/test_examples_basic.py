@@ -76,8 +76,8 @@ def test_json_request_get(fh_http: FlowHeaterLayer):
     data = json.loads(stdout)
     print(data)
     assert data["method"] == "GET"
-    assert data["headers"]["user-agent"].startswith("python-requests/")
-    assert data["headers"]["foo"] == "bar"
+    assert data["headers"]["user-agent"][0].startswith("python-requests/")
+    assert data["headers"]["foo"][0] == "bar"
     assert data["body"] == ""
 
 
