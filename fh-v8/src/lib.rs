@@ -238,7 +238,26 @@ pub async fn process_request(
     conversation_id: Uuid,
     code: String,
 ) -> Result<Response> {
-    let mut js_runtime = prepare_runtime(tx_db, req.clone(), conversation_id);
+    let (cmd_tx2, cmd_rx2) = oneshot::channel();
+    let req_audit_item = execute_command!(
+        tx_db,
+        ReqCmd::CreateAuditLogEntry {
+            item: fh_db::request_conversation::AuditItem::new_request(
+                conversation_id,
+                0,
+                req.clone(),
+            ),
+            cmd_tx: cmd_tx2,
+        },
+        cmd_rx2
+    );
+
+    let mut js_runtime = prepare_runtime(
+        tx_db.clone(),
+        req.clone(),
+        conversation_id,
+        req_audit_item.get_id(),
+    );
     js_runtime.execute("custom_code.js", &prepare_user_code(&code, false))?;
     js_runtime.run_event_loop().await?;
 
@@ -249,26 +268,34 @@ pub async fn process_request(
 
     // println!("Requests: {:?}", requests);
 
+    let mut final_response = if rt_state.final_response.is_some() {
+        rt_state.final_response.clone().unwrap()
+    } else {
+        Response {
+            code: 200,
+            headers: HashMap::new(),
+            body: Some(String::from_utf8(
+                rt_state
+                    .request_list
+                    .iter()
+                    .last()
+                    .cloned()
+                    .unwrap_or(req)
+                    .body
+                    .as_bytes()
+                    .to_vec(),
+            )?),
+            version: "HTTP/1.1".to_string(), // TODO: fill that with something useful
+        }
+    };
+
     let mut response_headers = HashMap::new();
     response_headers.insert(
         "FH-Conversation-Id".to_string(),
         vec![conversation_id.to_string()],
     );
 
-    Ok(Response {
-        code: 200,
-        headers: response_headers,
-        body: Some(String::from_utf8(
-            rt_state
-                .request_list
-                .iter()
-                .last()
-                .cloned()
-                .unwrap_or(req)
-                .body
-                .as_bytes()
-                .to_vec(),
-        )?),
-        version: "HTTP/1.1".to_string(), // TODO: fill that with something useful
-    })
+    final_response.headers.extend(response_headers);
+
+    Ok(final_response)
 }
