@@ -1,12 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-    ops::{Deref, DerefMut},
-};
+use std::{collections::HashMap, convert::TryFrom};
 use warp::http;
 
-use crate::{try_header_map_to_hashmap, version_to_string};
+use crate::{response::Response, try_header_map_to_hashmap, version_to_string};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RequestSpec {
@@ -42,20 +38,41 @@ impl TryFrom<http::Request<Vec<u8>>> for Request {
 }
 
 #[derive(Debug)]
-pub struct RequestList {
-    pub inner: Vec<Request>,
+pub struct RequestResponseList {
+    pub requests: HashMap<usize, Request>,
+    pub responses: HashMap<usize, Response>,
 }
 
-impl Deref for RequestList {
-    type Target = Vec<Request>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+impl RequestResponseList {
+    pub fn new() -> Self {
+        Self {
+            requests: HashMap::new(),
+            responses: HashMap::new(),
+        }
     }
-}
 
-impl DerefMut for RequestList {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+    pub fn add_request(&mut self, idx: usize, req: Request) {
+        self.requests.insert(idx, req);
+    }
+
+    pub fn add_response(&mut self, idx: usize, resp: Response) {
+        self.responses.insert(idx, resp);
+    }
+
+    pub fn get_last_response_body(&self) -> Option<String> {
+        if self.responses.len() > 0 {
+            return Some(
+                self.responses
+                    .iter()
+                    .last()
+                    .unwrap()
+                    .1
+                    .clone()
+                    .body
+                    .unwrap_or("".to_string()),
+            );
+        }
+
+        None
     }
 }
