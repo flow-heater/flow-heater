@@ -1,11 +1,10 @@
 pub(crate) mod filters {
-    use crate::server::{with_prelude, with_sender, FhHttpError};
-    use fh_core::{request::Request, ReqSender};
+    use crate::server::{util, with_prelude, with_sender};
+    use fh_core::ReqSender;
     use fh_db::ReqCmd;
     use fh_v8::ProcessorCmd;
-    use std::convert::TryFrom;
     use uuid::Uuid;
-    use warp::{http, Filter, Rejection};
+    use warp::Filter;
 
     pub(crate) fn public_filters(
         tx_db: ReqSender<ReqCmd>,
@@ -16,32 +15,6 @@ pub(crate) mod filters {
             .or(run_request_processor_with_prelude(tx_db, tx_proc))
     }
 
-    async fn try_extract_request(
-        method: http::Method,
-        path: warp::path::FullPath,
-        headers: http::HeaderMap,
-        body: warp::hyper::body::Bytes,
-    ) -> Result<Request, Rejection> {
-        let mut req = http::Request::builder()
-            .method(method)
-            .uri(path.as_str())
-            .body(body.iter().cloned().collect::<Vec<u8>>())
-            .expect("request builder");
-        {
-            *req.headers_mut() = headers;
-        }
-
-        Request::try_from(req).map_err(|e| warp::reject::custom(FhHttpError::new(e)))
-    }
-
-    fn extract_request() -> impl Filter<Extract = (Request,), Error = warp::Rejection> + Copy {
-        warp::method()
-            .and(warp::path::full())
-            .and(warp::header::headers_cloned())
-            .and(warp::body::bytes())
-            .and_then(try_extract_request)
-    }
-
     pub(crate) fn run_request_processor(
         tx_db: ReqSender<ReqCmd>,
         tx_proc: ReqSender<ProcessorCmd>,
@@ -50,7 +23,7 @@ pub(crate) mod filters {
             .and(with_sender(tx_db.clone()))
             .and(with_sender(tx_proc.clone()))
             .and(with_prelude(false))
-            .and(extract_request())
+            .and(util::extract_request())
             .and_then(super::handlers::run_request_processor)
     }
 
@@ -62,7 +35,7 @@ pub(crate) mod filters {
             .and(with_sender(tx_db.clone()))
             .and(with_sender(tx_proc.clone()))
             .and(with_prelude(true))
-            .and(extract_request())
+            .and(util::extract_request())
             .and_then(super::handlers::run_request_processor)
     }
 
@@ -73,7 +46,7 @@ pub(crate) mod filters {
         warp::path!("hello" / String)
             .and(with_sender(tx_db.clone()))
             .and(with_sender(tx_proc.clone()))
-            .and(extract_request())
+            .and(util::extract_request())
             .and_then(super::handlers::process_request)
     }
 }
