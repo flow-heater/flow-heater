@@ -1,3 +1,4 @@
+//! Database structs and functions for the RequestProcessor entity.
 use super::RequestProcessorError;
 use anyhow::Result;
 use fh_core::DbConnection;
@@ -6,6 +7,9 @@ use std::{convert::AsRef, str::FromStr};
 use strum_macros::{self, AsRefStr, EnumString};
 use uuid::Uuid;
 
+/// Central representation of a user-defined code snippet, which is used to
+/// process incoming requests. The RequestProcessor's Uuid is used as the
+/// identifier in the URL (`/processor/{processor_id}/run`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestProcessor {
     #[serde(skip_deserializing)]
@@ -17,20 +21,23 @@ pub struct RequestProcessor {
     pub code: String,
 }
 
+/// Variantes of supported language snippets.
 #[derive(Debug, Clone, Serialize, Deserialize, AsRefStr, EnumString)]
 #[serde(rename_all = "lowercase")]
 pub enum RequestProcessorLanguage {
     Javascript,
-    Typescript,
+    //Typescript,
 }
 
+/// Variantes of supported runtimes.
 #[derive(Debug, Clone, Serialize, Deserialize, AsRefStr, EnumString)]
 #[serde(rename_all = "lowercase")]
 pub enum RequestProcessorRuntime {
     V8,
-    WASM,
+    //WASM,
 }
 
+/// Stores a new RequestProcessor to the underlying database.
 pub(crate) async fn create_request_processor(
     conn: &mut DbConnection,
     data: &RequestProcessor,
@@ -54,6 +61,7 @@ pub(crate) async fn create_request_processor(
     Ok(())
 }
 
+/// Fetches a RequestProcessor for the given Uuid.
 pub(crate) async fn get_request_processor(
     conn: &mut DbConnection,
     id: &Uuid,
@@ -83,6 +91,7 @@ pub(crate) async fn get_request_processor(
     }
 }
 
+/// Updates a RequestProcessor with the given struct.
 pub(crate) async fn update_request_processor(
     conn: &mut DbConnection,
     id: &Uuid,
@@ -110,6 +119,7 @@ pub(crate) async fn update_request_processor(
     Ok(())
 }
 
+/// Deletes a RequestProcessor with the given Uuid.
 pub(crate) async fn delete_request_processor(
     conn: &mut DbConnection,
     id: &Uuid,

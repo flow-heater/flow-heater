@@ -10,30 +10,61 @@ use uuid::Uuid;
 pub mod request_conversation;
 pub mod request_processor;
 
+/// Central Error type for all kinds of internal errors.
+///
+/// TODO: move to fh-core
 #[derive(Error, Debug)]
 pub enum RequestProcessorError {
+    /// Database Error: in case an entity is not found for a given Uuid.
     #[error("{kind} with id {id} not found")]
     NotFound { kind: String, id: Uuid },
+
+    /// Database Error: All unspecific sqlx Errors are wrapped here.
     #[error(transparent)]
     Db(#[from] sqlx::Error),
-    #[error("Unable to parse enum: {0}")]
+
+    /// Happens when parsing a string to an enum fails.
+    #[error("Unable to parse to enum: {0}")]
     Parse(#[from] strum::ParseError),
+
+    /// Happens when parsing a string to a Uuid fails.
     #[error(transparent)]
     UuidParse(#[from] uuid::Error),
+
+    /// Happens when Json (de-)serialization fails.
     #[error(transparent)]
     JsonSerialize(#[from] serde_json::Error),
+
+    /// Generic error variant, wrapping [`anyhow::Error`]. This is needed
+    /// because e.g. `deno_core` uses this type a lot.
     #[error(transparent)]
     Processing(#[from] anyhow::Error),
+
+    /// Happens when locking Mutexes fails.
     #[error("{0}")]
     Locking(String),
+
+    /// Happens when time parsing errors occur.
     #[error(transparent)]
     TimeParse(#[from] chrono::ParseError),
+
+    /// Completely custom error type wrapper.
     #[error("{0}")]
     Custom(String),
+
+    /// Error, when a nullable DB field is NULL but should not be for specific
+    /// cases.
     #[error("{0}")]
     EmptyDbField(String),
 }
 
+/// Central Command Enum, which contains all Commands to be sent to the `fh_db`
+/// crate. A ReqCmd is received over a [`tokio::sync::mpsc`] channel and handled
+/// in the [`crate::request_manager`] function.
+///
+/// Each variant of the ReqCmd responds data back using a [`Responder`] type
+/// which, by convention is given by the variant field `cmd_tx`. The Responder
+/// is the transmitter of a [`tokio::sync::oneshot`] channel.
 #[derive(Debug)]
 pub enum ReqCmd {
     CreateRequestProcessor {
@@ -71,6 +102,8 @@ pub enum ReqCmd {
     },
 }
 
+/// Async function which can be run e.g. by tokio which loops forever and
+/// receives [`ReqCmd`] commands via the given Receiver.
 pub async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
     let pool = TypedPool::connect(&env::var("DATABASE_URL")?)
         .await
@@ -83,6 +116,9 @@ pub async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<
     Ok(())
 }
 
+/// Actual `ReqCmd` command processor which matches the given variant and calls
+/// the underlying functions in the submodules (e.g.
+/// [`crate::request_processor'] or [`crate::request_conversation`]).
 async fn process_command(cmd: ReqCmd, pool: &DbPool<DbType>) -> Result<()> {
     match cmd {
         ReqCmd::CreateRequestProcessor {

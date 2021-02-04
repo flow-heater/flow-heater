@@ -5,18 +5,21 @@ use warp::{http, Filter, Rejection};
 
 use super::AppContext;
 
+/// Warp filter which wraps the [`AppContext`].
 pub(crate) fn with_ctx(
     ctx: AppContext,
 ) -> impl Filter<Extract = (AppContext,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || ctx.clone())
 }
 
+/// Warp filter which wraps the prelude boolean parameter.
 pub(crate) fn with_prelude(
     prelude: bool,
 ) -> impl Filter<Extract = (bool,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || prelude)
 }
 
+/// Warp filter which extracts the full http request data.
 pub(crate) fn extract_request() -> impl Filter<Extract = (Request,), Error = warp::Rejection> + Copy
 {
     warp::method()
@@ -26,6 +29,8 @@ pub(crate) fn extract_request() -> impl Filter<Extract = (Request,), Error = war
         .and_then(try_extract_request)
 }
 
+/// Helpe function which tries to extract a [`fh_core::request::Request`] from
+/// warps request data.
 async fn try_extract_request(
     method: http::Method,
     path: warp::path::FullPath,

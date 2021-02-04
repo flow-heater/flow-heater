@@ -72,6 +72,7 @@ sqlite:
 
 mermaid:
     yarn add @mermaid-js/mermaid-cli
+    ./node_modules/.bin/mmdc --input docs/crates.mmd --output docs/crates.png --backgroundColor transparent --theme forest
 
 docs: mermaid
-    ./node_modules/.bin/mmdc --input docs/crates.mmd --output docs/crates.png --backgroundColor transparent --theme forest
+    cargo doc --no-deps

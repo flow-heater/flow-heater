@@ -1,14 +1,22 @@
+//! HTTP Endpoints for the `/conversation` path.
+
+/// Wraps all warp Filters for the RequestConversation endpoints.
 pub(crate) mod filters {
     use crate::server::{util, AppContext};
     use uuid::Uuid;
     use warp::Filter;
 
+    /// Convenient wrapper function which contains all filters.
     pub(crate) fn conversation_filters(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         get_request_conversation_audit_items(ctx).or(get_request_conversation(ctx))
     }
 
+    /// Fetch a RequestConversation by Uuid.
+    ///
+    /// - method: GET
+    /// - path: /conversation/{conversation_id}
     pub(crate) fn get_request_conversation(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -18,6 +26,10 @@ pub(crate) mod filters {
             .and_then(super::handlers::get_request_conversation)
     }
 
+    /// Fetch a RequestConversations AuditItems by Conversation Uuid.
+    ///
+    /// - method: GET
+    /// - path: /conversation/{conversation_id}/audit_item
     pub(crate) fn get_request_conversation_audit_items(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -35,6 +47,7 @@ pub(crate) mod handlers {
     use tokio::sync::oneshot;
     use uuid::Uuid;
 
+    /// Gets a RequestConversation.
     pub(crate) async fn get_request_conversation(
         id: Uuid,
         ctx: AppContext,
@@ -49,6 +62,7 @@ pub(crate) mod handlers {
         Ok(warp::reply::json(&res))
     }
 
+    /// Gets a RequestConversation's AuditItems.
     pub(crate) async fn get_request_conversation_audit_items(
         id: Uuid,
         ctx: AppContext,

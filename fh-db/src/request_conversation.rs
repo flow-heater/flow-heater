@@ -1,3 +1,5 @@
+//! Database structs and functions for the [`RequestConversation`] and
+//! subsequent [`AuditItem`] entities.
 use super::{request_processor::get_request_processor, RequestProcessorError};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -9,9 +11,18 @@ use sqlx::Row;
 use std::str::FromStr;
 use uuid::Uuid;
 
+/// Represents all possible Item variants, which can be handled/stored for a
+/// RequestConversation.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum AuditItem {
+    /// Incoming HTTP request (increment 0) or a subsequently issued HTTP
+    /// request from the JavaScript runtime. The `inc` field is just a counter
+    /// to indicate, in which order the requests were issued in case the
+    /// `created_at` is ambigous.
+    ///
+    /// Uses [`fh_core::request::Request`] to serialize the full request data as
+    /// JSON.
     #[serde(rename = "request")]
     Request {
         id: Uuid,
@@ -20,6 +31,12 @@ pub enum AuditItem {
         conversation_id: Uuid,
         payload: fh_core::request::Request,
     },
+    /// Represents a received HTTP response for a given HTTP request. Contains a
+    /// `request_id` (Uuid) field, which references an [`AuditItem`] of type
+    /// [`AuditItem::Request`].
+    ///
+    /// Uses [`fh_core::response::Response`] to serialize the full response data
+    /// as JSON.
     #[serde(rename = "response")]
     Response {
         id: Uuid,
@@ -28,6 +45,7 @@ pub enum AuditItem {
         request_id: Uuid,
         payload: fh_core::response::Response,
     },
+    /// Represents a simple log entry (string) to be stored in an [`AuditItem`].
     #[serde(rename = "log")]
     Log {
         id: Uuid,
@@ -38,6 +56,7 @@ pub enum AuditItem {
 }
 
 impl AuditItem {
+    /// Gets the Uuid of the underlying variant.
     pub fn get_id(&self) -> Uuid {
         match self {
             Self::Response { id, .. } => *id,
@@ -46,6 +65,7 @@ impl AuditItem {
         }
     }
 
+    /// Helper method to create a new [`AuditItem::Request`] variant.
     pub fn new_request(
         conversation_id: Uuid,
         inc: i32,
@@ -60,6 +80,7 @@ impl AuditItem {
         }
     }
 
+    /// Helper method to create a new [`AuditItem::Response`] variant.
     pub fn new_response(
         conversation_id: Uuid,
         request_id: Uuid,
@@ -74,6 +95,7 @@ impl AuditItem {
         }
     }
 
+    /// Helper method to create a new [`AuditItem::Log`] variant.
     pub fn new_log(conversation_id: Uuid, payload: String) -> Self {
         Self::Log {
             id: Uuid::new_v4(),
@@ -83,6 +105,7 @@ impl AuditItem {
         }
     }
 
+    /// Convert a [`DbAuditItem`] back to a [`AuditItem`].
     fn from_db_audit_item(item: &DbAuditItem) -> Result<Self, RequestProcessorError> {
         Ok(match item.kind.as_str() {
             "request" => Self::Request {
@@ -118,6 +141,7 @@ impl AuditItem {
         })
     }
 
+    /// Convert a [`AuditItem`] to a [`DbAuditItem`].
     fn to_audit_db_item(&self) -> Result<DbAuditItem, RequestProcessorError> {
         Ok(match self {
             AuditItem::Request {
@@ -168,6 +192,10 @@ impl AuditItem {
     }
 }
 
+/// Represents an AuditItem which can be stored to the database. This struct is
+/// needed because the Payload varies for Request/Response/Log and possible
+/// further ones. Conversion from/to [`AuditItem`] happens via
+/// [`AuditItem::to_audit_db_item`] and [`AuditItem::from_db_audit_item`].
 #[derive(Debug, FromRow)]
 struct DbAuditItem {
     id: Uuid,
@@ -179,6 +207,10 @@ struct DbAuditItem {
     payload: String,
 }
 
+/// A RequestConversation is created on each request to a
+/// [`crate::request_processor::RequestProcessor`] endpoint. It is linked to the
+/// respective RequestProcessor by it's Uuid and contains a list of
+/// [`AuditItem`] entities.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestConversation {
     pub id: Uuid,
@@ -187,6 +219,8 @@ pub struct RequestConversation {
     audit_items: Vec<AuditItem>,
 }
 
+/// Physically writes a [`RequestConversation`] struct to the underlying
+/// database.
 pub(crate) async fn create_request_conversation(
     conn: &mut DbConnection,
     request_processor_id: &Uuid,
@@ -217,6 +251,8 @@ pub(crate) async fn create_request_conversation(
     })
 }
 
+/// Fetches a [`RequestConversation`] struct from the underlying database, using
+/// a RequestConversation Uuid.
 pub(crate) async fn get_request_conversation(
     conn: &mut DbConnection,
     id: &Uuid,
@@ -248,7 +284,9 @@ pub(crate) async fn get_request_conversation(
     }
 }
 
-pub async fn get_audit_items(
+/// Fetches all AuditItem instances for a single Conversation Uuid.
+/// The output is chronologically sorted.
+pub(crate) async fn get_audit_items(
     conn: &mut DbConnection,
     conversation_id: &Uuid,
 ) -> Result<Vec<AuditItem>, RequestProcessorError> {
@@ -295,6 +333,7 @@ pub async fn get_audit_items(
     Ok(items)
 }
 
+/// Stores a single AuditItem to the underlying database.
 pub(crate) async fn create_audit_item(
     conn: &mut DbConnection,
     item: AuditItem,

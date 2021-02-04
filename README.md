@@ -22,7 +22,7 @@ After the installation of the prerequesites, you can just run Flow Heater with:
 just run
 ```
 
-This builds and starts the local http server on port `3000`.
+This builds and starts the local http server on port `3030`.
 
 ## REST API
 The Flow Heater REST API is documented in [API.md](fh-http/API.md).
@@ -48,13 +48,27 @@ just test-e2e
 
 Invoke specific tests:
 ```bash
-
 # Address tests having `example` in their name.
 just test-e2e -k example
 
 # Address tests marked with `@pytest.mark.admin`.
 just test-e2e -m admin
 ```
+
+## Documentation
+Building graphs + documentation usually works with:
+```bash
+just docs
+```
+
+If you work on on WSL2, you usually need to install these libs before mermaid / puppeteer is working (thanks to [this article](https://chaosandpenguins.com/blog/2021/01/15/troubleshooting-puppeteer-in-wsl2/)):
+- libnss3
+- libatk-adaptor
+- libcups2
+- libxkbcommon0
+- libgtk-3-0
+- libgbm1
+
 
 ## Credits
 Flow Heater uses the following great libraries / projects

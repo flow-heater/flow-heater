@@ -16,17 +16,34 @@ use std::{cell::RefCell, rc::Rc};
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
+/// Wrapper type for all data, which is stored in the JsRuntime.
 pub(crate) struct RuntimeState {
+    /// Simple counter to count all incoming + issued requests.
     pub(crate) counter: RequestCounter,
+
+    /// Transmitter to transmit `ReqCmd` commands to the `fh_db` crate.
     pub(crate) tx_db: ReqSender<ReqCmd>,
+
+    /// Incoming request.
     pub(crate) request: Request,
+
+    /// Uuid of the incoming requests [`fh_db::request_conversation::AuditItem`].
     pub(crate) request_audit_id: Uuid,
+
+    /// Contains all requests + responses.
     pub(crate) request_list: RequestResponseList,
+
+    /// Id of the current conversation.
     pub(crate) conversation_id: Uuid,
+
+    /// Optional final response.
     pub(crate) final_response: Option<Response>,
 }
 
 impl RuntimeState {
+    /// Creates a new RuntimeState.
+    ///
+    /// Implicitly creates an AuditItem for the incoming request.
     async fn new(
         request: Request,
         tx_db: ReqSender<ReqCmd>,
@@ -57,6 +74,9 @@ impl RuntimeState {
         })
     }
 
+    /// Adds an issued Request.
+    ///
+    /// Implicitly creates an AuditItem for the issued request.
     async fn add_request(&mut self, request: Request) -> anyhow::Result<usize> {
         let inc = self.counter.increment();
         self.request_list.add_request(inc, request.clone());
@@ -77,6 +97,9 @@ impl RuntimeState {
         Ok(inc)
     }
 
+    /// Adds a received Response.
+    ///
+    /// Implicitly creates an AuditItem for the issued response.
     async fn add_response(&mut self, idx: usize, response: Response) -> anyhow::Result<()> {
         self.request_list.add_response(idx, response.clone());
 
@@ -97,26 +120,13 @@ impl RuntimeState {
         Ok(())
     }
 
+    /// Adds the final response.
     async fn add_final_response(&mut self, response: Response) -> anyhow::Result<()> {
         self.final_response = Some(response.clone());
-
-        let (cmd_tx2, cmd_rx2) = oneshot::channel();
-        execute_command!(
-            self.tx_db,
-            ReqCmd::CreateAuditLogEntry {
-                item: fh_db::request_conversation::AuditItem::new_response(
-                    self.conversation_id,
-                    self.request_audit_id,
-                    response,
-                ),
-                cmd_tx: cmd_tx2,
-            },
-            cmd_rx2
-        );
-
         Ok(())
     }
 
+    /// Adds a log entry by creating a AuditItem::Log.
     async fn add_log_entry(&mut self, log: String) -> anyhow::Result<()> {
         let (cmd_tx2, cmd_rx2) = oneshot::channel();
         execute_command!(
@@ -131,6 +141,12 @@ impl RuntimeState {
         Ok(())
     }
 
+    /// Computes the final response body.
+    ///
+    /// The computation goes like this:
+    /// 1. If a `final_response` was explicitly set with `respond_with`, take this responses body.
+    /// 2. If not, take the last response body from the internal `RequestResponseList`.
+    /// 3. If there was no response, yet then echo the incoming requests body.
     pub fn get_final_response_body(&self) -> anyhow::Result<String> {
         if self.final_response.is_some() {
             return Ok(self
@@ -153,9 +169,11 @@ impl RuntimeState {
     }
 }
 
+/// Simple wrapper type for a Counter
 pub(crate) struct RequestCounter(usize);
 
 impl RequestCounter {
+    /// Increments the counters value by one and returns the old value.
     fn increment(&mut self) -> usize {
         let old = self.0;
         self.0 += 1;
@@ -163,6 +181,9 @@ impl RequestCounter {
     }
 }
 
+/// Represents the `get_request` function, which can be called from the JsRuntime
+/// using `Deno.core.jsonOpAsync("get_request")`.
+/// Returns a JSON representation of the incoming HTTP Request of the the [`fh_core::request::Request`].
 fn op_get_request(
     state: &mut OpState,
     _args: Value,
@@ -172,6 +193,9 @@ fn op_get_request(
     Ok(serde_json::json!(r.request))
 }
 
+/// Adds a final response, which shall be returned to the client. Represents the `respond_with` function, which can be called from the JsRuntime
+/// using `Deno.core.jsonOpAsync("respond_with", response)`.
+/// The response object is a JSON representation of [`fh_core::response::Response`].
 async fn op_respond_with(
     state: Rc<RefCell<OpState>>,
     args: Value,
@@ -186,6 +210,13 @@ async fn op_respond_with(
     Ok(serde_json::json!(()))
 }
 
+/// Represents the `fh_log` function, which can be called from the JsRuntime
+/// using `Deno.core.jsonOpAsync("fh_log", spec)`.
+/// The `spec` object has one key:
+/// - data: String to be logged.
+///
+/// The data is actually printed to stdout by the JsRuntime and additionally stored to the db
+/// as a [`fh_db::request_conversation::AuditItem::Log`].
 async fn op_log(
     state: Rc<RefCell<OpState>>,
     args: Value,
@@ -204,6 +235,20 @@ async fn op_log(
 
     Ok(serde_json::json!(()))
 }
+
+/// Represents the `dispatch_request` function, which can be called from the
+/// JsRuntime using `Deno.core.jsonOpAsync("dispatch_request", spec)`. The
+/// `spec` object has two keys:
+/// - request: regular request object, based on [`fh_core::request::Request`]
+/// - url: fully qualified URL, where the request should be sent to.
+///
+/// The request is stored as a
+/// [`fh_db::request_conversation::AuditItem::Request`] to the database. Then
+/// the request is converted to a `reqwest::Request` and executed. The returned
+/// `reqwest::Response` is converted to a [`fh_core::response::Response`] and
+/// then stored in the database as
+/// [`fh_db::request_conversation::AuditItem::Response`] with the requests Uuid
+/// to match be able to match a Request / Response pair later on.
 async fn op_dispatch_request(
     state: Rc<RefCell<OpState>>,
     args: Value,
@@ -234,6 +279,7 @@ async fn op_dispatch_request(
     Ok(serde_json::json!(r))
 }
 
+/// Registers all custom operations and the [`RuntimeState`] and returns the final prepared [`JsRuntime`].
 pub(crate) async fn prepare_runtime(
     tx_db: ReqSender<ReqCmd>,
     request: Request,
@@ -248,10 +294,6 @@ pub(crate) async fn prepare_runtime(
     js_runtime.register_op("fh_log", deno_core::json_op_async(op_log));
     js_runtime.register_op("respond_with", deno_core::json_op_async(op_respond_with));
     js_runtime.register_op("get_request", deno_core::json_op_sync(op_get_request));
-    js_runtime.register_op(
-        "op_resources",
-        deno_core::json_op_sync(deno_core::op_resources),
-    );
 
     js_runtime
         .op_state()
@@ -261,6 +303,9 @@ pub(crate) async fn prepare_runtime(
     Ok(js_runtime)
 }
 
+/// Prepares the final code to be executed. If `wrap_prelude` is true, the given
+/// code string is wrapped with prelude and sequel, from `fh_prelude.js` and
+/// `fh_sequel.js`.
 pub(crate) fn prepare_user_code(code: &str, wrap_prelude: bool) -> String {
     let mut final_code: String = "".to_string();
 
