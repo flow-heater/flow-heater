@@ -12,3 +12,6 @@ __pycache__
 
 # database
 /var
+
+# Node
+/node_modules

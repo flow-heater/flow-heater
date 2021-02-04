@@ -1,46 +1,41 @@
-# Flow Heater HTTP
+# Flow Heater
 
-## Setup
-install sqlx-cli:
-```bash
-cargo install sqlx-cli
-```
+## Synopsis
+This project provides an HTTP service, which runs custom programmable (JavaScript) code on incoming HTTP requests.
+Users can write their own JavaScript snippets and forward HTTP requests to these programmable endpoints. 
 
-Migrations are run automatically, when running the `just run` target.
+Flow Heater is open source, licensed under GNU AGPL v3. Currently, you can run only run Flow Heater on self-hosted installations. Flow Heater is written in Rust and therefore aims to be secure, fast and easily cross-platform deployable as a single static binary. 
 
-## Example
-Compile and run the `fh-http` binary with:
+Flow Heater currently uses SQLite as a database, which will soon be replaced by a fully-fledged PostgreSQL solution.
 
+## Usage
+### Install Prerequesites
+For running Flow Heater, you need 
+- a full rust toolchain (incl. cargo) installed via [rustup](https://rustup.rs/)
+- the awesome Command Runner [Just](https://github.com/casey/just#installation).
+- For local development:
+  - python3.8 for the e2e-test suite
+
+### Running Flow Heater
+After the installation of the prerequesites, you can just run Flow Heater with:
 ```bash
 just run
 ```
 
-On another terminal, issue an HTTP request to `localhost:3030/hello/foo`:
+This builds and starts the local http server on port `3000`.
 
+## REST API
+The Flow Heater REST API is documented in [API.md](fh-http/API.md).
+
+## Architecture
+Please see details in [architecture.md](docs/architecture.md).
+
+## Local development / testing
+We use for the development currently the vscode editor + rust-analyzer extension. To start the vscode with the correct environment variables run:
 ```bash
-$> curl -iX OPTIONS localhost:3030/hello/xxx -d'{"a":"b"}'
-HTTP/1.1 200 OK
-content-type: application/json
-content-length: 123
-date: Sat, 02 Jan 2021 12:52:27 GMT
-
-{"code":200,"headers":{},"body":[116,104,105,115,32,105,115,32,116,104,101,32,112,97,116,99,104,101,100,32,98,111,100,121]}
+just code
 ```
 
-The `fh-http` process spits out some lines to stdout.
-```bash
-$> cargo run --bin fh-http
-   Compiling fh-http v0.1.0 (/home/tim/projects/flow-heater/workspace/fh-http)
-    Finished dev [unoptimized + debuginfo] target(s) in 3.75s
-     Running `target/debug/fh-http`
-DENO: Got request body: {"a":"b"}, content-type header: application/x-www-form-urlencoded, method: OPTIONS
-RUST: modified request is: Request { headers: {"content-length": "9", "user-agent": "curl/7.58.0", "accept": "*/*", "content-type": "application/json", "host": "localhost:3030"}, body: "this is the patched body", method: "POST", path: "/hello/xxx", query: "" }
-```
-
-As you can see in the `modified request`, the method and the body is patched, as well as the `content-type` header.
-
-
-## Tests
 Invoke unit tests:
 ```bash
 just test
@@ -60,3 +55,13 @@ just test-e2e -k example
 # Address tests marked with `@pytest.mark.admin`.
 just test-e2e -m admin
 ```
+
+## Credits
+Flow Heater uses the following great libraries / projects
+- [tokio](https://tokio.rs/) as the async runtime
+- [warp](https://github.com/seanmonstar/warp) as http server
+- [deno_core](https://github.com/denoland/deno) as v8 runtime wrapper
+- [sqlx](https://github.com/launchbadge/sqlx) as database abstraction
+
+## Example
+For an example, please see [example.md](docs/example.md).

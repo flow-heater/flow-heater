@@ -69,3 +69,9 @@ code:
 
 sqlite:
     sqlite3 ./var/lib/fh-http.db
+
+mermaid:
+    yarn add @mermaid-js/mermaid-cli
+
+docs: mermaid
+    ./node_modules/.bin/mmdc --input docs/crates.mmd --output docs/crates.png --backgroundColor transparent --theme forest
