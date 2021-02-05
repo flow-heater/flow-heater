@@ -4,12 +4,14 @@ use serde::Serialize;
 use tokio::sync::{mpsc::error::SendError, oneshot::error::RecvError};
 use warp::{http::StatusCode, reject::Reject, Rejection, Reply};
 
+/// General HTTP Response JSON error response envelope.
 #[derive(Serialize)]
 struct ErrorMessage {
     code: u16,
     message: String,
 }
 
+/// HttpError wrapper for warp rejection.
 #[derive(Debug)]
 pub struct FhHttpError<T> {
     err: T,
@@ -27,6 +29,9 @@ impl Reject for FhHttpError<SendError<ReqCmd>> {}
 impl Reject for FhHttpError<SendError<ProcessorCmd>> {}
 impl Reject for FhHttpError<anyhow::Error> {}
 
+/// Fallback function which receives a rejection and detects various error types
+/// and returns a [`ErrorMessage`] to display useful HTTP errors to the
+/// requesting user.
 pub(crate) async fn handle_rejections(
     err: Rejection,
 ) -> Result<impl Reply, std::convert::Infallible> {

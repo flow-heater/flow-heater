@@ -1,8 +1,12 @@
+//! HTTP Endpoints for the `/processor` path.
+
+/// Wraps all warp Filters for the RequestProcessor endpoints.
 pub(crate) mod filters {
     use crate::server::{util, AppContext};
     use uuid::Uuid;
     use warp::Filter;
 
+    /// Convenient wrapper function which contains all filters.
     pub(crate) fn public_filters(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -11,6 +15,10 @@ pub(crate) mod filters {
             .or(run_request_processor_with_prelude(ctx))
     }
 
+    /// Run a RequestProcessor by Id *without* prelude and sequel.
+    ///
+    /// - method: any
+    /// - path: /processor/{processor_id}/run
     pub(crate) fn run_request_processor(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -21,6 +29,10 @@ pub(crate) mod filters {
             .and_then(super::handlers::run_request_processor)
     }
 
+    /// Run a RequestProcessor by Id *with* prelude and sequel.
+    ///
+    /// - method: any
+    /// - path: /processor/{processor_id}/run_with_prelude
     pub(crate) fn run_request_processor_with_prelude(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -31,6 +43,11 @@ pub(crate) mod filters {
             .and_then(super::handlers::run_request_processor)
     }
 
+    /// Run the code in the static file `fh_v8/src/flow_heater.js` with prelude
+    /// and sequel.
+    ///
+    /// - method: any
+    /// - path: /hello/{any_string}
     pub(crate) fn process_request_old(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -49,6 +66,7 @@ pub(crate) mod handlers {
     use uuid::Uuid;
     use warp::{Rejection, Reply};
 
+    /// Run a RequestProcessor.
     pub(crate) async fn run_request_processor(
         id: Uuid,
         ctx: AppContext,
@@ -80,6 +98,7 @@ pub(crate) mod handlers {
         ))
     }
 
+    /// Run the static RequestProcessor from `fh_v8/src/flow_heater.js`.
     pub(crate) async fn process_request(
         _name: String,
         ctx: AppContext,

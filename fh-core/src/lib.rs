@@ -14,13 +14,27 @@ use warp::{
 pub mod request;
 pub mod response;
 
+/// Generic type alias for oneshot Responders.
 pub type Responder<T> = oneshot::Sender<T>;
+
+/// Generic type alias for cross-thread clonable mpsc::Senders.
 pub type ReqSender<T> = Arc<Mutex<mpsc::Sender<T>>>;
+
+/// Generic type alias for the SQLX DB Pool.
 pub type DbPool<T> = Pool<T>;
+
+/// Alias for a typed database pool. Needed to easily change to a different pool
+/// type later on.
 pub type TypedPool = SqlitePool;
+
+/// Alias for a typed database. Needed to easily change to a different database
+/// type later on.
 pub type DbType = Sqlite;
+
+/// Alias for the database connection.
 pub type DbConnection = PoolConnection<DbType>;
 
+/// Locking Error, used in the warp rejection handling.
 #[derive(Debug)]
 pub struct FhLockingError<T> {
     err: T,
@@ -35,6 +49,7 @@ impl<T> FhLockingError<T> {
 impl Reject for FhLockingError<String> {}
 impl Reject for FhLockingError<anyhow::Error> {}
 
+/// ProcessorError, used in the warp rejection handling.
 #[derive(Debug)]
 pub struct FhProcessorError<T> {
     err: T,
@@ -50,6 +65,8 @@ impl Reject for FhProcessorError<String> {}
 impl Reject for FhProcessorError<anyhow::Error> {}
 impl Reject for FhProcessorError<RecvError> {}
 
+/// Utility function which tries to convert the given
+/// [`http::header::map::HeaderMap`] to a serializable HashMap.
 fn try_header_map_to_hashmap(
     hm: HeaderMap<HeaderValue>,
 ) -> Result<HashMap<String, Vec<String>>, anyhow::Error> {
@@ -65,6 +82,7 @@ fn try_header_map_to_hashmap(
     Ok(res)
 }
 
+/// Utility function to convert [`http::Version`] variants to simple strings.
 fn version_to_string(v: http::Version) -> String {
     match v {
         http::Version::HTTP_09 => "HTTP/0.9",

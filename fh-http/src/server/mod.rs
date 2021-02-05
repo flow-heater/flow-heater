@@ -15,6 +15,8 @@ use fh_db::ReqCmd;
 use fh_v8::ProcessorCmd;
 use warp::Filter;
 
+/// Async function to be run by an executor like tokio. Loads all endpoint
+/// configurations and runs the server.
 pub(crate) async fn web_server(ctx: AppContext) {
     let routes = public_filters(&ctx)
         .or(admin_filters(&ctx))
@@ -24,6 +26,8 @@ pub(crate) async fn web_server(ctx: AppContext) {
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await
 }
 
+/// Cheap clonable wrapper struct which contains cheap clonable references so
+/// that it can be used to pass it around in warp filters.
 #[derive(Debug, Clone)]
 pub struct AppContext {
     tx_db: ReqSender<ReqCmd>,

@@ -38,8 +38,8 @@ def test_create_admin_processor(fh_http: ServerLayer):
     rp2 = RequestProcessor(
         id=None,
         name="testing2",
-        runtime="wasm",
-        language="typescript",
+        runtime="v8",
+        language="javascript",
         code="my fun code2",
     )
 
@@ -106,8 +106,8 @@ def test_delete_admin_processor(fh_http: ServerLayer):
     rp = RequestProcessor(
         id=None,
         name="testing",
-        runtime="wasm",
-        language="typescript",
+        runtime="v8",
+        language="javascript",
         code="my fun code",
     )
 

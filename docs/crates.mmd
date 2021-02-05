@@ -1,0 +1,10 @@
+graph TB
+    fh-http(fh-http<br />central http endpoint) --> fh-db(fh-db<br />processes db requests)
+    fh-http --> fh-v8(fh-v8<br />runs v8 runtime with custom user code)
+    
+    fh-db --->sqlite[("database<br/>(currently sqlite<br/>later postgres)")]
+    
+    fh-db -->fh-core(fh-core<br />common structs, errors<br />and type aliases)
+    fh-v8 -->fh-core
+    
+    fh-v8 --->v8-runtime[(v8-runtime<br />using deno_core)]

@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
+/// Async function which can be run e.g. by tokio which loops forever and
+/// receives [`ProcessorCmd`] commands via the given Receiver.
 pub async fn request_processing_manager(
     rx: &mut mpsc::Receiver<ProcessorCmd>,
 ) -> anyhow::Result<()> {
@@ -25,6 +27,13 @@ pub async fn request_processing_manager(
     Ok(())
 }
 
+/// Central Command Enum, which contains all Commands to be sent to the `fh_v8`
+/// crate. A ProcessorCmd is received over a [`tokio::sync::mpsc`] channel and handled
+/// in the [`crate::request_processing_manager`] function.
+///
+/// Each variant of the ProcessorCmd responds data back using a [`Responder`] type
+/// which, by convention is given by the variant field `cmd_tx`. The Responder
+/// is the transmitter of a [`tokio::sync::oneshot`] channel.
 #[derive(Debug)]
 pub enum ProcessorCmd {
     Http {
@@ -41,6 +50,8 @@ pub enum ProcessorCmd {
     },
 }
 
+/// Actual `ProcessorCmd` command processor which matches the given variant and
+/// calls the underlying functions.
 async fn process_command(cmd: ProcessorCmd) -> Result<()> {
     match cmd {
         ProcessorCmd::Http {
@@ -160,6 +171,9 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
 
     Ok(())
 }
+
+/// Handles RequestProcessor creation with all the boilerplate. Passes
+/// [`ReqCmd`] commands to the `fh_db` crate asyncronously.
 async fn create_request_processor(
     tx_db: ReqSender<ReqCmd>,
     proc: RequestProcessor,
@@ -184,6 +198,8 @@ async fn create_request_processor(
         .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?
 }
 
+/// Handles RequestConversation creation with all the boilerplate. Passes
+/// [`ReqCmd`] commands to the `fh_db` crate asyncronously.
 async fn create_request_conversation(
     tx_db: ReqSender<ReqCmd>,
     request_processor_id: Uuid,
@@ -208,6 +224,7 @@ async fn create_request_conversation(
         .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?
 }
 
+/// Fetches a RequestProcessor from the `fh_db` crate using a [`ReqCmd`] command.
 async fn get_request_processor(
     tx_db: ReqSender<ReqCmd>,
     id: Uuid,
@@ -232,6 +249,9 @@ async fn get_request_processor(
         .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?
 }
 
+/// Actual V8 processing function. Creates the JsRuntime, prepares prelude and
+/// sequel code snippets and optionally wraps the RequestProcessor's code with
+/// these. Returns a final response including a `FH-Conversation-Id` header.
 pub async fn process_request(
     tx_db: ReqSender<ReqCmd>,
     req: Request,
@@ -256,7 +276,7 @@ pub async fn process_request(
             code: 200,
             headers: HashMap::new(),
             body: Some(rt_state.get_final_response_body()?),
-            version: "HTTP/1.1".to_string(), // TODO: fill that with something useful
+            version: "HTTP/1.1".to_string(), // TODO: fill that with something correct
         }
     };
 

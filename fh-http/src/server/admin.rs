@@ -1,8 +1,12 @@
+//! HTTP Endpoints for the `/admin` path.
+
+/// Wraps all warp Filters for the admin endpoints.
 pub(crate) mod filters {
     use crate::server::{util, AppContext};
     use uuid::Uuid;
     use warp::Filter;
 
+    /// Convenient wrapper function which contains all filters.
     pub(crate) fn admin_filters(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -12,7 +16,11 @@ pub(crate) mod filters {
             .or(delete_processor(ctx))
     }
 
-    pub(crate) fn create_processor(
+    /// Create a RequestProcessor.
+    ///
+    /// - method: POST
+    /// - path: /admin/processor
+    pub fn create_processor(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor")
@@ -22,7 +30,11 @@ pub(crate) mod filters {
             .and_then(super::handlers::create_processor)
     }
 
-    pub(crate) fn get_processor(
+    /// Fetch a RequestProcessor by Uuid.
+    ///
+    /// - method: GET
+    /// - path: /admin/processor/{processor_id}
+    pub fn get_processor(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
@@ -31,7 +43,11 @@ pub(crate) mod filters {
             .and_then(super::handlers::get_processor)
     }
 
-    pub(crate) fn update_processor(
+    /// Update a RequestProcessor by Uuid and the given data.
+    ///
+    /// - method: PUT
+    /// - path: /admin/processor/{processor_id}
+    pub fn update_processor(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
@@ -41,7 +57,11 @@ pub(crate) mod filters {
             .and_then(super::handlers::update_processor)
     }
 
-    pub(crate) fn delete_processor(
+    /// Delete a RequestProcessor by Uuid.
+    ///
+    /// - method: DELETE
+    /// - path: /admin/processor/{processor_id}
+    pub fn delete_processor(
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
@@ -58,6 +78,7 @@ pub(crate) mod handlers {
     use tokio::sync::oneshot;
     use uuid::Uuid;
 
+    /// Creates a RequestProcessor
     pub(crate) async fn create_processor(
         ctx: AppContext,
         processor: RequestProcessor,
@@ -75,6 +96,7 @@ pub(crate) mod handlers {
         Ok(warp::reply::json(&res))
     }
 
+    /// Fetches a RequestProcessor.
     pub(crate) async fn get_processor(
         id: Uuid,
         ctx: AppContext,
@@ -85,6 +107,7 @@ pub(crate) mod handlers {
         Ok(warp::reply::json(&proc))
     }
 
+    /// Updates a RequestProcessor.
     pub(crate) async fn update_processor(
         id: Uuid,
         ctx: AppContext,
@@ -104,6 +127,7 @@ pub(crate) mod handlers {
         Ok(warp::reply::json(&res))
     }
 
+    /// Deletes a RequestProcessor.
     pub(crate) async fn delete_processor(
         id: Uuid,
         ctx: AppContext,
