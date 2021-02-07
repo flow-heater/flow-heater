@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from tests.conftest import FlowHeaterLayer
-from tests.util import execute
+from tests.util import execute, get_conversation_from_response
 
 basedir = Path("examples/01-basic")
 
@@ -53,13 +53,17 @@ def test_json_demo(fh_http: FlowHeaterLayer):
     response = execute(basedir / "json-demo.js")
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Check STDOUT
-    stdout = fh_http.get_stdout()
-    print(stdout)
-    assert 'Stringify: {"a":"b"}' in stdout
-    assert "Parse works, too" in stdout
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 3 == len(conversation.audit_items)
+
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    assert 'Stringify: {"a":"b"}' in json.loads(conversation.audit_items[1].payload)
+
+    assert conversation.audit_items[2].kind == "log"
+    assert "Parse works, too" in json.loads(conversation.audit_items[2].payload)
 
 
 def test_json_request_get(fh_http: FlowHeaterLayer):
@@ -67,14 +71,16 @@ def test_json_request_get(fh_http: FlowHeaterLayer):
     response = execute(basedir / "json-request-echo.js", headers={"foo": "bar"})
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Read STDOUT
-    stdout = fh_http.get_stdout()
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    # Check STDOUT
-    data = json.loads(stdout)
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
     print(data)
+
     assert data["method"] == "GET"
     assert data["headers"]["user-agent"][0].startswith("python-requests/")
     assert data["headers"]["foo"][0] == "bar"
@@ -86,14 +92,16 @@ def test_json_request_post(fh_http: FlowHeaterLayer):
     response = execute(basedir / "json-request-echo.js", method="post")
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Read STDOUT
-    stdout = fh_http.get_stdout()
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    # Check STDOUT
-    data = json.loads(stdout)
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
     print(data)
+
     assert data["method"] == "POST"
     assert data["body"] == ""
 
@@ -105,13 +113,14 @@ def test_json_request_post_x_www_form_urlencoded(fh_http: FlowHeaterLayer):
     )
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Read STDOUT
-    stdout = fh_http.get_stdout()
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    # Check STDOUT
-    data = json.loads(stdout)
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
     print(data)
     assert data["method"] == "POST"
     assert data["body"] == "foo=bar"
@@ -124,13 +133,14 @@ def test_json_request_post_json(fh_http: FlowHeaterLayer):
     )
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Read STDOUT
-    stdout = fh_http.get_stdout()
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    # Check STDOUT
-    data = json.loads(stdout)
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
     print(data)
     assert data["method"] == "POST"
     assert data["body"] == '{"foo": "bar"}'

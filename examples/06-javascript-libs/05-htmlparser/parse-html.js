@@ -21,4 +21,4 @@
 
 var xml = '<document attribute="value"><name>David Bowie</name></document>';
 var doc = pjXML.parse(xml);
-Deno.core.print(JSON.stringify(doc));
+await fh.log(JSON.stringify(doc));

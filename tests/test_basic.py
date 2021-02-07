@@ -1,5 +1,8 @@
+import json
 import requests
+
 from lovely.testlayers.server import ServerLayer
+from tests.util import get_conversation_from_response
 
 
 def test_spike(fh_http: ServerLayer):
@@ -13,7 +16,10 @@ def test_spike(fh_http: ServerLayer):
     assert data["body"] == "xxx"
     assert data["headers"]["content-type"][0] == "application/xml"
 
-    # Check STDOUT for fun.
-    fh_http.stdout.seek(0)
-    stdout = fh_http.stdout.read()
-    assert "DENO: Got request body" in stdout
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 5 == len(conversation.audit_items)
+
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    assert "DENO: Got request body" in json.loads(conversation.audit_items[1].payload)

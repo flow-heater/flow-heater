@@ -25,7 +25,7 @@ let payload = data.payload;
 
 // Apply rot12 encoding/decoding to payload content.
 var encoded = modcaesar.rot12_encode(payload);
-Deno.core.print("encoded: " + encoded + "\n");
+await fh.log("encoded: " + encoded + "\n");
 
 var decoded = modcaesar.rot12_decode(encoded);
-Deno.core.print("decoded: " + decoded + "\n");
+await fh.log("decoded: " + decoded + "\n");
