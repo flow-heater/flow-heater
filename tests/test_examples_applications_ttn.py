@@ -18,7 +18,9 @@ def test_ttn_to_hiveeyes(fh_http: FlowHeaterLayer):
 
     with open(basedir / "ttn-to-hiveeyes-ingress.json", "r") as f:
         payload = json.load(f)
-    response = execute(basedir / "ttn-to-hiveeyes-recipe.js", method="post", json=payload)
+    response = execute(
+        basedir / "ttn-to-hiveeyes-recipe.js", method="post", json=payload
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -48,7 +50,9 @@ def test_ttn_to_beeobserver(fh_http: FlowHeaterLayer):
 
     with open(basedir / "ttn-to-beeobserver-ingress.json", "r") as f:
         payload = json.load(f)
-    response = execute(basedir / "ttn-to-beeobserver-recipe.js", method="post", json=payload)
+    response = execute(
+        basedir / "ttn-to-beeobserver-recipe.js", method="post", json=payload
+    )
 
     assert response.status_code == 200
     data = response.json()

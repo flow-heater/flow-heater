@@ -7,11 +7,6 @@
  * - https://github.com/hiveeyes/terkin-datalogger/tree/0.10.0/client/TTN
  *
 **/
-// Preamble.
-Deno.core.ops();
-let request = Deno.core.jsonOpSync("get_request", []);
-
-
 // ------------------------------------
 // B O B
 // https://bee-observer.org/api/sensors
@@ -21,7 +16,7 @@ let request = Deno.core.jsonOpSync("get_request", []);
 const input = JSON.parse(request.body);
 const payload_ttn = input.payload_fields;
 
-var output_bob   = {};
+var output_bob = {};
 
 // Those are randomized accounts. No worries.
 switch (input.dev_id) {
@@ -46,8 +41,8 @@ for (var key in payload_ttn) {
         } else if (/voltage_0/.test(key)) {
             output_bob.bv = payload_ttn[key];
         } else if (/temperature_1/.test(key)) {
-            i = parseInt(key.split("_")[1],10);
-            output_bob["t_i_" + (i-9)] = payload_ttn[key];
+            i = parseInt(key.split("_")[1], 10);
+            output_bob["t_i_" + (i - 9)] = payload_ttn[key];
         }
     }
 }
@@ -55,9 +50,9 @@ for (var key in payload_ttn) {
 output_bob.rssi = input.metadata.gateways[0].rssi;
 
 for (i = 1; i < input.metadata.gateways.length; i++) {
-  if (input.metadata.gateways[i].rssi > output_bob.rssi) {
-      output_bob.rssi = input.metadata.gateways[i].rssi;
-  }
+    if (input.metadata.gateways[i].rssi > output_bob.rssi) {
+        output_bob.rssi = input.metadata.gateways[i].rssi;
+    }
 }
 
 //response.body = output_bob;

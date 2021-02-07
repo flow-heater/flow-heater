@@ -36,6 +36,14 @@ def read_code(filename_or_code: Union[Path, str]) -> str:
         return filename_or_code
 
 
+def wrap_with_async_main(code: str) -> str:
+    return f"""
+    async function main(fh, request) {{
+        {code}
+    }}
+    """
+
+
 def create_processor(code: str):
 
     rp = RequestProcessor(
@@ -53,7 +61,7 @@ def create_processor(code: str):
 
 
 def run_processor(
-    identifier, method="get", prelude=False, **kwargs
+    identifier, method="get", prelude=True, **kwargs
 ) -> requests.Response:
     path = "run" if not prelude else "run_with_prelude"
 
@@ -67,9 +75,11 @@ def run_processor(
     return response
 
 
-def execute(filename_or_code: Union[Path, str], method="get", prelude=False, **kwargs):
-
+def execute(filename_or_code: Union[Path, str], method="get", prelude=True, **kwargs):
     code = read_code(filename_or_code)
+
+    if prelude:
+        code = wrap_with_async_main(code)
 
     identifier = create_processor(code)
     response = run_processor(identifier, method=method, prelude=prelude, **kwargs)

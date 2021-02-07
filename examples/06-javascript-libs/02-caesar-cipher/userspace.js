@@ -16,17 +16,12 @@
 // @fh:include("./modquery.js")
 // @fh:include("./modcaesar.js")
 
-// Read request.
-Deno.core.ops();
-let request = Deno.core.jsonOpSync("get_request", []);
-
 // Decode "x-www-form-urlencoded" form data.
 // https://morioh.com/p/480aef8e92cd
 let data = modquery.parse(request.body);
 
 // Use "payload" field;
 let payload = data.payload;
-
 
 // Apply rot12 encoding/decoding to payload content.
 var encoded = modcaesar.rot12_encode(payload);
