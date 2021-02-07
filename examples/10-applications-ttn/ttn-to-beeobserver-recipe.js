@@ -64,4 +64,4 @@ request.body = JSON.stringify(output_bob);
 
 
 // Epilogue.
-Deno.core.print(JSON.stringify(request));
+await fh.log(JSON.stringify(request));

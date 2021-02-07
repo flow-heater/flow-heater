@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from tests.conftest import FlowHeaterLayer
-from tests.util import execute
+from tests.util import execute, get_conversation_from_response
 
 basedir = Path("examples/10-applications-ttn")
 
@@ -23,15 +23,16 @@ def test_ttn_to_hiveeyes(fh_http: FlowHeaterLayer):
     )
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Read STDOUT
-    stdout = fh_http.get_stdout()
-    print(stdout)
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    # Check STDOUT
-    data = json.loads(stdout)
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
     print(data)
+
     assert data["method"] == "POST"
 
     with open(basedir / "ttn-to-hiveeyes-egress.json", "r") as f:
@@ -55,15 +56,16 @@ def test_ttn_to_beeobserver(fh_http: FlowHeaterLayer):
     )
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Read STDOUT
-    stdout = fh_http.get_stdout()
-    print(stdout)
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    # Check STDOUT
-    data = json.loads(stdout)
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
     print(data)
+
     assert data["method"] == "POST"
 
     with open(basedir / "ttn-to-beeobserver-egress.json", "r") as f:

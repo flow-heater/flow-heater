@@ -92,3 +92,7 @@ def get_request_conversation(
 ) -> Tuple[RequestConversation, requests.Response]:
     response = requests.get(f"http://localhost:3030/conversation/{conversation_id}")
     return (from_dict(data_class=RequestConversation, data=response.json()), response)
+
+
+def get_conversation_from_response(response: requests.Response) -> RequestConversation:
+    return get_request_conversation(response.headers["fh-conversation-id"])[0]

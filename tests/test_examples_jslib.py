@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from tests.conftest import FlowHeaterLayer
-from tests.util import execute
+from tests.util import execute, get_conversation_from_response
 from tests.preprocessor import preprocess_javascript
 
 basedir = Path("examples/06-javascript-libs")
@@ -19,9 +19,13 @@ def test_modhello(fh_http: FlowHeaterLayer):
     response = execute(jscode)
     assert response.status_code == 200
 
-    # Check STDOUT
-    stdout = fh_http.get_stdout()
-    assert stdout == "Hello world."
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
+
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    assert "Hello world." == json.loads(conversation.audit_items[1].payload)
 
 
 def test_modcaesar(fh_http: FlowHeaterLayer):
@@ -35,10 +39,16 @@ def test_modcaesar(fh_http: FlowHeaterLayer):
     response = execute(jscode, data={"payload": "Hello world."})
     assert response.status_code == 200
 
-    # Check STDOUT
-    stdout = fh_http.get_stdout()
-    assert "encoded: TQXXA IADXP." in stdout
-    assert "decoded: HELLO WORLD." in stdout
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 3 == len(conversation.audit_items)
+
+    # Check Log entries
+    assert "log" == conversation.audit_items[1].kind
+    assert "encoded: TQXXA IADXP.\n" == json.loads(conversation.audit_items[1].payload)
+
+    assert "log" == conversation.audit_items[2].kind
+    assert "decoded: HELLO WORLD.\n" == json.loads(conversation.audit_items[2].payload)
 
 
 def test_htmlparser(fh_http: FlowHeaterLayer):
@@ -52,12 +62,15 @@ def test_htmlparser(fh_http: FlowHeaterLayer):
     response = execute(jscode)
 
     assert response.status_code == 200
-    data = response.json()
 
-    # Check STDOUT
-    stdout = fh_http.get_stdout()
+    # Fetch RequestConversation
+    conversation = get_conversation_from_response(response)
+    assert 2 == len(conversation.audit_items)
 
-    data = json.loads(stdout)
+    # Check log entries
+    assert "log" == conversation.audit_items[1].kind
+    data = json.loads(json.loads(conversation.audit_items[1].payload))
+    print(data)
 
     assert data == {
         "type": 9,

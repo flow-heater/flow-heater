@@ -13,4 +13,4 @@
 // @fh:include("./modhello.js")
 
 var output = modhello.echo("Hello world.");
-Deno.core.print(output);
+await fh.log(output);
