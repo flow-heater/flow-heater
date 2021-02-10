@@ -5,25 +5,28 @@ from fastapi import FastAPI, Depends, Request
 from fastapi_cloudauth.auth0 import Auth0, Auth0CurrentUser, Auth0Claims
 from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
-import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="xxx")  # TODO: move somewhere safe
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("GATEWAY_SESSION_SECRET"))
 
 oauth = OAuth()
 oauth.register(
     "auth0",
-    client_id="yyy",  # TODO: move somewhere safe
-    client_secret="xxx",  # TOOD: move somewhere safe
-    server_metadata_url="https://flow-heater.eu.auth0.com/.well-known/openid-configuration",
+    client_id=os.getenv("AUTH0_CLIENT_ID"),
+    client_secret=os.getenv("AUTH0_CLIENT_SECRET"),
+    server_metadata_url=os.getenv("AUTH0_WELL_KNOWN_ENDPOINT"),
     client_kwargs={
         "scope": "openid profile email",
     },
 )
 
 
-auth0 = Auth0(domain=os.environ["DOMAIN"])
-get_current_user = Auth0CurrentUser(domain=os.environ["DOMAIN"])
+auth0 = Auth0(domain=os.getenv("AUTH0_DOMAIN"))
+get_current_user = Auth0CurrentUser(domain=os.getenv("AUTH0_DOMAIN"))
 
 
 # @app.route("/")
