@@ -5,8 +5,7 @@ from lovely.testlayers.server import ServerLayer
 from tests.util import get_conversation_from_response
 
 
-def test_spike(fh_http: ServerLayer):
-
+def test_spike(fh_http: ServerLayer, fh_gateway: ServerLayer):
     response = requests.post("http://localhost:3030/hello/xxx", json={"a": "b"})
     data = response.json()
 

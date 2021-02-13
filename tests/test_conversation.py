@@ -1,13 +1,13 @@
 from pathlib import Path
 from dateutil.parser import parse
 
-from tests.conftest import FlowHeaterLayer
+from lovely.testlayers.server import ServerLayer
 from tests.util import execute, get_request_conversation
 
 basedir = Path("examples/05-conversation")
 
 
-def test_get_conversation(fh_http: FlowHeaterLayer):
+def test_get_conversation(fh_http: ServerLayer, fh_gateway: ServerLayer):
     response = execute(basedir / "audit-item-logging.js", prelude=True)
 
     assert response.status_code == 200
@@ -20,7 +20,7 @@ def test_get_conversation(fh_http: FlowHeaterLayer):
     parse(conversation.created_at)
 
 
-def test_audit_item_logging(fh_http: FlowHeaterLayer):
+def test_audit_item_logging(fh_http: ServerLayer, fh_gateway: ServerLayer):
     response = execute(basedir / "audit-item-logging.js", prelude=True)
 
     assert response.status_code == 200
@@ -32,7 +32,7 @@ def test_audit_item_logging(fh_http: FlowHeaterLayer):
     assert '"Body is: "' == conversation.audit_items[2].payload
 
 
-def test_audit_item_request(fh_http: FlowHeaterLayer):
+def test_audit_item_request(fh_http: ServerLayer, fh_gateway: ServerLayer):
     response = execute(basedir / "audit-item-request.js", prelude=True)
 
     assert response.status_code == 200

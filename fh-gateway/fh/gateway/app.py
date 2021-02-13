@@ -1,15 +1,16 @@
 import os
-from typing import Optional
 
 from fastapi import FastAPI, Depends, Request
 from fastapi_cloudauth.auth0 import Auth0, Auth0CurrentUser, Auth0Claims
 from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
+from starlette.responses import JSONResponse
+
+from fh.gateway.proxy import proxy_fh_request
+
 
 load_dotenv()
-
-
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("GATEWAY_SESSION_SECRET"))
 
@@ -29,28 +30,32 @@ auth0 = Auth0(domain=os.getenv("AUTH0_DOMAIN"))
 get_current_user = Auth0CurrentUser(domain=os.getenv("AUTH0_DOMAIN"))
 
 
-# @app.route("/")
-# async def root(request: Request):
-#     async with httpx.AsyncClient(base_url="http://localhost:3031") as client:
-#         if len(request.url.query) > 0:
-
-#         r = await client.request()
-
-
-@app.route("/admin")
-def admin(current_user: Auth0Claims = Depends(get_current_user)):
-    return {"Hello": "World"}
+# HINT: using @app.route() fails, because it does somehow not resolve the
+# dependencies (in this case, the Auth0Claims)
+@app.get("/admin/{tail:path}")
+@app.post("/admin/{tail:path}")
+@app.put("/admin/{tail:path}")
+@app.delete("/admin/{tail:path}")
+async def admin(request: Request):
+    r = await proxy_fh_request(os.getenv("CORE_UPSTREAM"), request, None)
+    return JSONResponse(r)
 
 
-@app.get("/user/", dependencies=[Depends(auth0.scope("read:users"))])
-def secure_user(current_user: Auth0Claims = Depends(get_current_user)):
-    # ID token is valid
-    return f"Hello, {current_user.username}"
+@app.get("/conversation/{tail:path}")
+async def conversation(request: Request):
+    r = await proxy_fh_request(os.getenv("CORE_UPSTREAM"), request)
+    return JSONResponse(r)
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Optional[str] = None):
-    return {"item_id": item_id, "q": q}
+@app.get("/processor/{tail:path}")
+@app.post("/processor/{tail:path}")
+@app.put("/processor/{tail:path}")
+@app.delete("/processor/{tail:path}")
+@app.head("/processor/{tail:path}")
+@app.options("/processor/{tail:path}")
+async def processor(request: Request):
+    r = await proxy_fh_request(os.getenv("CORE_UPSTREAM"), request)
+    return JSONResponse(r)
 
 
 @app.get("/auth/auth0")

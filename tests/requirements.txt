@@ -5,6 +5,7 @@ responses
 lovely-testlayers
 dacite
 python-dateutil
+httpx
 
 # Code style
 black
