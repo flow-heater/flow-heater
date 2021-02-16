@@ -19,6 +19,7 @@ class RequestProcessor:
 
 def create_request_processor(rp: RequestProcessor) -> Response:
     response = requests.post("http://localhost:3030/admin/processor", json=asdict(rp))
+    print(response.text)
     data = response.json()
 
     assert len(data["id"]) > 0

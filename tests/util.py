@@ -90,7 +90,7 @@ def execute(filename_or_code: Union[Path, str], method="get", prelude=True, **kw
 def get_request_conversation(
     conversation_id: str,
 ) -> Tuple[RequestConversation, requests.Response]:
-    response = requests.get(f"http://localhost:3030/conversation/{conversation_id}")
+    response = requests.get(f"http://localhost:3031/conversation/{conversation_id}")
     return (from_dict(data_class=RequestConversation, data=response.json()), response)
 
 

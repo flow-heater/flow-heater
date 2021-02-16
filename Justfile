@@ -1,4 +1,5 @@
 export RUST_BACKTRACE := "1"
+export DOMAIN := "flow-heater.eu.auth0.com"
 
 # The default recipe. Show all available recipes.
 default:
@@ -37,14 +38,13 @@ test:
 
 
 # ------------------------------------------
-#          pytest-based e2e tests
+#          python environment
 # ------------------------------------------
-
-
 venvpath     := ".venv"
 pip          := venvpath + "/bin/pip"
 python       := venvpath + "/bin/python"
 pytest       := venvpath + "/bin/pytest"
+uvicorn      := venvpath + "/bin/uvicorn"
 
 # Run e2e tests.
 test-e2e *args: setup-virtualenv build
@@ -61,18 +61,26 @@ setup-virtualenv:
         python3 -m venv {{venvpath}}
         {{pip}} install --upgrade pip
         {{pip}} install --requirement tests/requirements.txt
+        {{pip}} install --requirement fh-gateway/requirements.txt
     fi
+
+# Runs the fh-gateway python project
+run-gateway:
+    {{uvicorn}} fh.gateway.app:app --reload --app-dir fh-gateway --port 3031
 
 # Tim's personal entrypoint for VSCODE. This way, it takes the freakin' DATABASE_URL env variable into account.
 code:
     code ./workspace.code-workspace
 
+# Jump into the sqlite3 shell
 sqlite:
     sqlite3 ./var/lib/fh-http.db
 
+# Install mermaid and generate mermaid graphs
 mermaid:
     yarn add @mermaid-js/mermaid-cli
     ./node_modules/.bin/mmdc --input docs/crates.mmd --output docs/crates.png --backgroundColor transparent --theme forest
 
+# Generate all docs
 docs: mermaid
     cargo doc --no-deps
