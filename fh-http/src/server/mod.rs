@@ -15,15 +15,23 @@ use fh_db::ReqCmd;
 use fh_v8::ProcessorCmd;
 use warp::Filter;
 
+/// Contain application specific configuration variables. This will include
+/// further config options later.
+#[derive(Debug)]
+pub(crate) struct Config {
+    /// Local port, the HTTP server will bind to.
+    pub(crate) port: u16,
+}
+
 /// Async function to be run by an executor like tokio. Loads all endpoint
 /// configurations and runs the server.
-pub(crate) async fn web_server(ctx: AppContext) {
+pub(crate) async fn web_server(ctx: AppContext, cfg: &Config) {
     let routes = public_filters(&ctx)
         .or(admin_filters(&ctx))
         .or(conversation_filters(&ctx))
         .recover(error::handle_rejections);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await
+    warp::serve(routes).run(([127, 0, 0, 1], cfg.port)).await
 }
 
 /// Cheap clonable wrapper struct which contains cheap clonable references so

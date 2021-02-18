@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 import responses
 
-from tests.preprocessor import get_path_safe, preprocess_javascript, load_resource
+from tests.preprocessor import get_path_safe, load_resource, preprocess_javascript
 
 
 @mock.patch("tests.preprocessor.load_resource", return_value="bazqux")
@@ -59,6 +59,4 @@ def test_get_path_safe_fail_traversal():
             "OR one path is relative and the other is absolute."
         )
     else:
-        assert ex.match(
-            "'.*?/something/fishy.js' does not start with '.*?'"
-        )
+        assert ex.match("'.*?/something/fishy.js' does not start with '.*?'")

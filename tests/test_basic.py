@@ -1,12 +1,12 @@
 import json
-import requests
 
-from lovely.testlayers.server import ServerLayer
-from tests.util import get_conversation_from_response
+from tests.util import ApiClient
 
 
-def test_spike(fh_http: ServerLayer, fh_gateway: ServerLayer):
-    response = requests.post("http://localhost:3030/hello/xxx", json={"a": "b"})
+def test_spike(
+    api_client: ApiClient,
+):
+    response = api_client.http_client.post("/hello/xxx", json={"a": "b"})
     data = response.json()
 
     # Check HTTP response.
@@ -16,7 +16,7 @@ def test_spike(fh_http: ServerLayer, fh_gateway: ServerLayer):
     assert data["headers"]["content-type"][0] == "application/xml"
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 5 == len(conversation.audit_items)
 
     # Check Log entries

@@ -9,7 +9,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   DATABASE_URL: sqlite:fh-http.db
-  CORE_UPSTREAM: http://localhost:3030
+  CORE_PORT: 3130
+  CORE_HOST: localhost
   GATEWAY_SESSION_SECRET: ${{ secrets.GATEWAY_SESSION_SECRET }}
   AUTH0_DOMAIN: flow-heater.eu.auth0.com
   AUTH0_WELL_KNOWN_ENDPOINT: https://flow-heater.eu.auth0.com/.well-known/openid-configuration

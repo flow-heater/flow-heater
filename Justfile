@@ -1,5 +1,4 @@
 export RUST_BACKTRACE := "1"
-export DOMAIN := "flow-heater.eu.auth0.com"
 
 # The default recipe. Show all available recipes.
 default:
@@ -47,11 +46,12 @@ pytest       := venvpath + "/bin/pytest"
 uvicorn      := venvpath + "/bin/uvicorn"
 
 # Run e2e tests.
+#  GATEWAY_PORT=3131 {{pytest}} tests -vvvv {{args}}
 test-e2e *args: setup-virtualenv build
     @echo
     @echo "INFO: Running e2e tests."
     @echo
-    {{pytest}} tests -vvvv {{args}}
+    CORE_PORT=3130 {{pytest}} tests -vvvv {{args}}
 
 # Setup Python virtualenv. This is used for running e2e tests with pytest.
 setup-virtualenv:
@@ -70,7 +70,7 @@ run-gateway:
 
 # Tim's personal entrypoint for VSCODE. This way, it takes the freakin' DATABASE_URL env variable into account.
 code:
-    code ./workspace.code-workspace
+    code .
 
 # Jump into the sqlite3 shell
 sqlite:
