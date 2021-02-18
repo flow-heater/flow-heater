@@ -15,6 +15,7 @@ use tokio::sync::mpsc;
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv()?;
+    pretty_env_logger::init();
 
     let config = Config {
         port: env::var("CORE_PORT")
