@@ -1,38 +1,13 @@
-from dataclasses import dataclass, asdict
-from typing import Optional
-from enum import Enum
+from dataclasses import asdict
 
 import pytest
-import requests
-from requests import Response
 from lovely.testlayers.server import ServerLayer
 
-
-@dataclass
-class RequestProcessor:
-    id: Optional[str]
-    name: str
-    runtime: str
-    language: str
-    code: str
-
-
-def create_request_processor(rp: RequestProcessor) -> Response:
-    response = requests.post("http://localhost:3030/admin/processor", json=asdict(rp))
-    print(response.text)
-    data = response.json()
-
-    assert len(data["id"]) > 0
-    assert data["name"] == rp.name
-    assert data["runtime"] == rp.runtime
-    assert data["language"] == rp.language
-    assert data["code"] == rp.code
-
-    return response
+from tests.util import ApiClient, RequestProcessor
 
 
 @pytest.mark.admin
-def test_create_admin_processor(fh_http: ServerLayer):
+def test_create_admin_processor(api_client: ApiClient):
     rp = RequestProcessor(
         id=None, name="testing", runtime="v8", language="javascript", code="my fun code"
     )
@@ -44,12 +19,12 @@ def test_create_admin_processor(fh_http: ServerLayer):
         code="my fun code2",
     )
 
-    create_request_processor(rp)
-    create_request_processor(rp2)
+    api_client.create_request_processor(rp)
+    api_client.create_request_processor(rp2)
 
 
 @pytest.mark.admin
-def test_get_admin_processor(fh_http: ServerLayer):
+def test_get_admin_processor(api_client: ApiClient):
     rp = RequestProcessor(
         id=None,
         name="testing-get",
@@ -57,10 +32,10 @@ def test_get_admin_processor(fh_http: ServerLayer):
         language="javascript",
         code="my fun code",
     )
-    response = create_request_processor(rp)
+    response = api_client.create_request_processor(rp)
     data = response.json()
 
-    response_get = requests.get(f"http://localhost:3030/admin/processor/{data['id']}")
+    response_get = api_client.http_client.get(f"/admin/processor/{data['id']}")
     data_get = response_get.json()
 
     assert data["id"] == data_get["id"]
@@ -71,18 +46,18 @@ def test_get_admin_processor(fh_http: ServerLayer):
 
 
 @pytest.mark.admin
-def test_update_admin_processor(fh_http: ServerLayer):
+def test_update_admin_processor(api_client: ApiClient):
     rp = RequestProcessor(
         id=None, name="testing", runtime="v8", language="javascript", code="my fun code"
     )
-    response = create_request_processor(rp)
+    response = api_client.create_request_processor(rp)
     data = response.json()
 
     rp.name = "testing-update"
     rp.code = "updated code"
 
-    response_update = requests.put(
-        f"http://localhost:3030/admin/processor/{data['id']}", json=asdict(rp)
+    response_update = api_client.http_client.put(
+        f"/admin/processor/{data['id']}", json=asdict(rp)
     )
     data_update = response_update.json()
 
@@ -92,7 +67,7 @@ def test_update_admin_processor(fh_http: ServerLayer):
     assert data["language"] == data_update["language"]
     assert "updated code" == data_update["code"]
 
-    response_get = requests.get(f"http://localhost:3030/admin/processor/{data['id']}")
+    response_get = api_client.http_client.get(f"/admin/processor/{data['id']}")
     data_get = response_get.json()
 
     assert data_update["id"] == data_get["id"]
@@ -103,7 +78,7 @@ def test_update_admin_processor(fh_http: ServerLayer):
 
 
 @pytest.mark.admin
-def test_delete_admin_processor(fh_http: ServerLayer):
+def test_delete_admin_processor(api_client: ApiClient):
     rp = RequestProcessor(
         id=None,
         name="testing",
@@ -112,25 +87,22 @@ def test_delete_admin_processor(fh_http: ServerLayer):
         code="my fun code",
     )
 
-    response = create_request_processor(rp)
+    response = api_client.create_request_processor(rp)
     rp_id = response.json()["id"]
-
-    response_delete = requests.delete(f"http://localhost:3030/admin/processor/{rp_id}")
+    response_delete = api_client.http_client.delete(f"/admin/processor/{rp_id}")
     assert 200 == response_delete.status_code
 
     # check if it's really gone
-    response_get = requests.get(f"http://localhost:3030/admin/processor/{rp_id}")
+    response_get = api_client.http_client.get(f"/admin/processor/{rp_id}")
     assert 404 == response_get.status_code
 
 
 @pytest.mark.admin
-def test_not_found_processor(fh_http: ServerLayer):
+def test_not_found_processor(api_client: ApiClient):
     id = "8a2e00e9-c710-4337-b717-bdcad0396df5"
-    assert 404 == requests.post(f"http://localhost:3030/processor/{id}/run").status_code
-    assert (
-        404 == requests.get(f"http://localhost:3030/admin/processor/{id}").status_code
-    )
-    resp = requests.delete(f"http://localhost:3030/admin/processor/{id}")
+    assert 404 == api_client.http_client.post(f"/processor/{id}/run").status_code
+    assert 404 == api_client.http_client.get(f"/admin/processor/{id}").status_code
+    resp = api_client.http_client.delete(f"/admin/processor/{id}")
     data = resp.json()
 
     assert 404 == resp.status_code

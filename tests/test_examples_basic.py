@@ -1,13 +1,12 @@
 import json
 from pathlib import Path
 
-from tests.conftest import FlowHeaterLayer
-from tests.util import execute, get_conversation_from_response
+from tests.util import ApiClient
 
 basedir = Path("examples/01-basic")
 
 
-def test_error_syntax(fh_http: FlowHeaterLayer):
+def test_error_syntax(api_client: ApiClient):
     """
     $ deno run examples/01-basic/error-syntax.js
     error: Expected ';', '}' or <eof> at file:///Users/amo/dev/flow-heater/fh-core/examples/01-basic/error-syntax.js:1:6
@@ -17,7 +16,9 @@ def test_error_syntax(fh_http: FlowHeaterLayer):
     See https://github.com/flow-heater/fh-core/issues/22.
     """
 
-    response = execute(basedir / "error-syntax.js", headers={"FH-Debug": "true"})
+    response = api_client.execute(
+        basedir / "error-syntax.js", headers={"FH-Debug": "true"}
+    )
 
     assert response.status_code == 500
     data = response.json()
@@ -26,7 +27,7 @@ def test_error_syntax(fh_http: FlowHeaterLayer):
     #       header "FH-Debug: true" will get evaluated appropriately.
 
 
-def test_error_runtime(fh_http: FlowHeaterLayer):
+def test_error_runtime(api_client: ApiClient):
     """
     $ deno run examples/01-basic/error-runtime.js
     error: Uncaught TypeError: JSON.foobar is not a function
@@ -39,7 +40,9 @@ def test_error_runtime(fh_http: FlowHeaterLayer):
     https://github.com/flow-heater/fh-core/issues/33.
     """
 
-    response = execute(basedir / "error-runtime.js", headers={"FH-Debug": "true"})
+    response = api_client.execute(
+        basedir / "error-runtime.js", headers={"FH-Debug": "true"}
+    )
 
     assert response.status_code == 500
     data = response.json()
@@ -48,14 +51,14 @@ def test_error_runtime(fh_http: FlowHeaterLayer):
     #       header "FH-Debug: true" will get evaluated appropriately.
 
 
-def test_json_demo(fh_http: FlowHeaterLayer):
+def test_json_demo(api_client: ApiClient):
 
-    response = execute(basedir / "json-demo.js")
+    response = api_client.execute(basedir / "json-demo.js")
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 3 == len(conversation.audit_items)
 
     # Check Log entries
@@ -66,14 +69,16 @@ def test_json_demo(fh_http: FlowHeaterLayer):
     assert "Parse works, too" in json.loads(conversation.audit_items[2].payload)
 
 
-def test_json_request_get(fh_http: FlowHeaterLayer):
+def test_json_request_get(api_client: ApiClient):
 
-    response = execute(basedir / "json-request-echo.js", headers={"foo": "bar"})
+    response = api_client.execute(
+        basedir / "json-request-echo.js", headers={"foo": "bar"}
+    )
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 2 == len(conversation.audit_items)
 
     # Check Log entries
@@ -82,19 +87,19 @@ def test_json_request_get(fh_http: FlowHeaterLayer):
     print(data)
 
     assert data["method"] == "GET"
-    assert data["headers"]["user-agent"][0].startswith("python-requests/")
+    assert data["headers"]["user-agent"][0].startswith("testclient")
     assert data["headers"]["foo"][0] == "bar"
     assert data["body"] == ""
 
 
-def test_json_request_post(fh_http: FlowHeaterLayer):
+def test_json_request_post(api_client: ApiClient):
 
-    response = execute(basedir / "json-request-echo.js", method="post")
+    response = api_client.execute(basedir / "json-request-echo.js", method="post")
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 2 == len(conversation.audit_items)
 
     # Check Log entries
@@ -106,16 +111,16 @@ def test_json_request_post(fh_http: FlowHeaterLayer):
     assert data["body"] == ""
 
 
-def test_json_request_post_x_www_form_urlencoded(fh_http: FlowHeaterLayer):
+def test_json_request_post_x_www_form_urlencoded(api_client: ApiClient):
 
-    response = execute(
+    response = api_client.execute(
         basedir / "json-request-echo.js", method="post", data={"foo": "bar"}
     )
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 2 == len(conversation.audit_items)
 
     # Check Log entries
@@ -126,16 +131,16 @@ def test_json_request_post_x_www_form_urlencoded(fh_http: FlowHeaterLayer):
     assert data["body"] == "foo=bar"
 
 
-def test_json_request_post_json(fh_http: FlowHeaterLayer):
+def test_json_request_post_json(api_client: ApiClient):
 
-    response = execute(
+    response = api_client.execute(
         basedir / "json-request-echo.js", method="post", json={"foo": "bar"}
     )
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 2 == len(conversation.audit_items)
 
     # Check Log entries

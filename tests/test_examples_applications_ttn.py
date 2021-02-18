@@ -1,13 +1,12 @@
 import json
 from pathlib import Path
 
-from tests.conftest import FlowHeaterLayer
-from tests.util import execute, get_conversation_from_response
+from tests.util import ApiClient
 
 basedir = Path("examples/10-applications-ttn")
 
 
-def test_ttn_to_hiveeyes(fh_http: FlowHeaterLayer):
+def test_ttn_to_hiveeyes(api_client: ApiClient):
     """
     Forward TTN payloads to Kotori for Hiveeyes.
 
@@ -18,14 +17,14 @@ def test_ttn_to_hiveeyes(fh_http: FlowHeaterLayer):
 
     with open(basedir / "ttn-to-hiveeyes-ingress.json", "r") as f:
         payload = json.load(f)
-    response = execute(
+    response = api_client.execute(
         basedir / "ttn-to-hiveeyes-recipe.js", method="post", json=payload
     )
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 2 == len(conversation.audit_items)
 
     # Check Log entries
@@ -40,7 +39,7 @@ def test_ttn_to_hiveeyes(fh_http: FlowHeaterLayer):
         assert json.loads(data["body"]) == outcome
 
 
-def test_ttn_to_beeobserver(fh_http: FlowHeaterLayer):
+def test_ttn_to_beeobserver(api_client: ApiClient):
     """
     Forward TTN payloads to BEEP for Bee Observer (BOB).
 
@@ -51,14 +50,14 @@ def test_ttn_to_beeobserver(fh_http: FlowHeaterLayer):
 
     with open(basedir / "ttn-to-beeobserver-ingress.json", "r") as f:
         payload = json.load(f)
-    response = execute(
+    response = api_client.execute(
         basedir / "ttn-to-beeobserver-recipe.js", method="post", json=payload
     )
 
     assert response.status_code == 200
 
     # Fetch RequestConversation
-    conversation = get_conversation_from_response(response)
+    conversation = api_client.get_conversation_from_response(response)
     assert 2 == len(conversation.audit_items)
 
     # Check Log entries
