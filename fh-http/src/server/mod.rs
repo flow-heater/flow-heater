@@ -29,6 +29,7 @@ pub(crate) async fn web_server(ctx: AppContext, cfg: &Config) {
     let routes = public_filters(&ctx)
         .or(admin_filters(&ctx))
         .or(conversation_filters(&ctx))
+        .with(warp::log("fh-core"))
         .recover(error::handle_rejections);
 
     warp::serve(routes).run(([127, 0, 0, 1], cfg.port)).await

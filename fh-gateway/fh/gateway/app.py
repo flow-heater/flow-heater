@@ -2,6 +2,7 @@ import os
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request
+from fastapi.param_functions import Depends
 from fastapi_cloudauth.auth0 import Auth0, Auth0Claims, Auth0CurrentUser
 from fh.gateway.config import Config
 from fh.gateway.proxy import proxy_fh_request
@@ -33,11 +34,9 @@ get_current_user = Auth0CurrentUser(domain=config.auth0.domain)
 @app.post("/admin/{tail:path}")
 @app.put("/admin/{tail:path}")
 @app.delete("/admin/{tail:path}")
-async def admin(request: Request):
+async def admin(request: Request, user: Auth0CurrentUser = Depends(get_current_user)):
     """
     Proxies all requests to the `/admin` endpoint upstream. Requires a logged in user.
-
-    TODO: add user requirement here incl. test-layer
     """
     r = await proxy_fh_request(config.core.upstream, request, None)
     return r

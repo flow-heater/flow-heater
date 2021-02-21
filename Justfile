@@ -1,4 +1,5 @@
 export RUST_BACKTRACE := "1"
+export RUST_LOG := "fh-core"
 
 # The default recipe. Show all available recipes.
 default:
