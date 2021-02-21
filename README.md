@@ -55,6 +55,36 @@ just test-e2e -k example
 just test-e2e -m admin
 ```
 
+### Debugging with VSCode
+Just add a new `launch.json` entry for PyTest:
+```json5
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Pytest",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "args": [
+                "-vvvv"
+            ],
+            "env": {
+                "CORE_PORT": "3130",
+                "RUST_BACKTRACE": "1",
+            },
+            "envFile": "${workspaceFolder}/.env",
+        }
+    ]
+}
+
+```
+
 ## Documentation
 Building graphs + documentation usually works with:
 ```bash
