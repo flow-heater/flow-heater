@@ -11,6 +11,7 @@ pub(crate) mod filters {
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         create_processor(ctx)
+            .or(get_processors(ctx))
             .or(get_processor(ctx))
             .or(update_processor(ctx))
             .or(delete_processor(ctx))
@@ -24,10 +25,35 @@ pub(crate) mod filters {
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor")
-            .and(util::with_ctx(ctx.clone()))
             .and(warp::post())
+            .and(warp::header("fh-user-id"))
             .and(warp::body::json())
+            .and(util::with_ctx(ctx.clone()))
             .and_then(super::handlers::create_processor)
+    }
+
+    /// Fetch all RequestProcessors by of a User.
+    ///
+    /// - method: GET
+    /// - path: /admin/processors
+    ///
+    /// TODO: If path "/admin/processor" is used, somehow it overlays the
+    /// existing path for POST /admin/processor and makes it not function
+    /// anymore as before and I do not know why. I even found examples from
+    /// warp, using this "feature" e.g.
+    /// https://github.com/seanmonstar/warp/blob/master/examples/todos.rs#L52 ->
+    /// GET
+    /// https://github.com/seanmonstar/warp/blob/master/examples/todos.rs#L63 ->
+    /// POST
+    /// but I don't want to debug that right now, hence the path difference.
+    pub fn get_processors(
+        ctx: &AppContext,
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+        warp::path!("admin" / "processors")
+            .and(warp::get())
+            .and(warp::header("fh-user-id"))
+            .and(util::with_ctx(ctx.clone()))
+            .and_then(super::handlers::get_processors)
     }
 
     /// Fetch a RequestProcessor by Uuid.
@@ -38,8 +64,9 @@ pub(crate) mod filters {
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
-            .and(util::with_ctx(ctx.clone()))
             .and(warp::get())
+            .and(warp::header("fh-user-id"))
+            .and(util::with_ctx(ctx.clone()))
             .and_then(super::handlers::get_processor)
     }
 
@@ -51,9 +78,10 @@ pub(crate) mod filters {
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
-            .and(util::with_ctx(ctx.clone()))
             .and(warp::put())
+            .and(warp::header("fh-user-id"))
             .and(warp::body::json())
+            .and(util::with_ctx(ctx.clone()))
             .and_then(super::handlers::update_processor)
     }
 
@@ -65,8 +93,9 @@ pub(crate) mod filters {
         ctx: &AppContext,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("admin" / "processor" / Uuid)
-            .and(util::with_ctx(ctx.clone()))
             .and(warp::delete())
+            .and(warp::header("fh-user-id"))
+            .and(util::with_ctx(ctx.clone()))
             .and_then(super::handlers::delete_processor)
     }
 }
@@ -80,10 +109,12 @@ pub(crate) mod handlers {
 
     /// Creates a RequestProcessor
     pub(crate) async fn create_processor(
+        user_id: String,
+        mut processor: RequestProcessor,
         ctx: AppContext,
-        processor: RequestProcessor,
     ) -> Result<impl warp::Reply, warp::Rejection> {
         let (cmd_tx, cmd_rx) = oneshot::channel();
+        processor.user_id = user_id;
         let res = db_cmd!(
             ctx,
             ReqCmd::CreateRequestProcessor {
@@ -99,6 +130,7 @@ pub(crate) mod handlers {
     /// Fetches a RequestProcessor.
     pub(crate) async fn get_processor(
         id: Uuid,
+        _user_id: String,
         ctx: AppContext,
     ) -> Result<impl warp::Reply, warp::Rejection> {
         let (cmd_tx, cmd_rx) = oneshot::channel();
@@ -107,11 +139,27 @@ pub(crate) mod handlers {
         Ok(warp::reply::json(&proc))
     }
 
+    /// Fetches all RequestProcessors for a user.
+    pub(crate) async fn get_processors(
+        user_id: String,
+        ctx: AppContext,
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        let (cmd_tx, cmd_rx) = oneshot::channel();
+        let proc = db_cmd!(
+            ctx,
+            ReqCmd::GetRequestProcessors { user_id, cmd_tx },
+            cmd_rx
+        );
+
+        Ok(warp::reply::json(&proc))
+    }
+
     /// Updates a RequestProcessor.
     pub(crate) async fn update_processor(
         id: Uuid,
-        ctx: AppContext,
+        _user_id: String,
         processor: RequestProcessor,
+        ctx: AppContext,
     ) -> Result<impl warp::Reply, warp::Rejection> {
         let (cmd_tx, cmd_rx) = oneshot::channel();
         let res = db_cmd!(
@@ -130,6 +178,7 @@ pub(crate) mod handlers {
     /// Deletes a RequestProcessor.
     pub(crate) async fn delete_processor(
         id: Uuid,
+        _user_id: String,
         ctx: AppContext,
     ) -> Result<impl warp::Reply, warp::Rejection> {
         let (cmd_tx, cmd_rx) = oneshot::channel();

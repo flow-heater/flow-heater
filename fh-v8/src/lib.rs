@@ -67,6 +67,7 @@ async fn process_command(cmd: ProcessorCmd) -> Result<()> {
                     language: RequestProcessorLanguage::Javascript,
                     runtime: RequestProcessorRuntime::V8,
                     code: prepare_user_code(include_str!("flow_heater.js"), true),
+                    user_id: Uuid::new_v4().to_string(), // TODO: replace with real UserId
                 },
             )
             .await;

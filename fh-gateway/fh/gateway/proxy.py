@@ -8,9 +8,11 @@ from starlette.datastructures import URL
 from starlette.responses import Response
 
 
+from fh.gateway.auth import FhAuth0JwkData
+
 #
 async def proxy_fh_request(
-    base_url: str, request: Request, user: Optional[Auth0Claims] = None
+    base_url: str, request: Request, user: Optional[FhAuth0JwkData] = None
 ):
     """
     Proxies http requests to anywhere we like. It takes the base_url parameter
@@ -33,6 +35,9 @@ async def proxy_fh_request(
             hostname=base_parsed.hostname,
             port=base_parsed.port,
         )
+
+    if user:
+        headers["fh-user-id"] = user.sub
 
     url = patch_url(base_url, request)
     del headers["host"]
