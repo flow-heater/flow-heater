@@ -10,8 +10,8 @@ edition = "2018"
 fh-v8 = {version="0.1", path="../fh-v8"}
 fh-db = {version="0.1", path="../fh-db"}
 fh-core = {version="0.1", path="../fh-core"}
-tokio = {version="0.2", features=["full"]}
-warp = "0.2"
+tokio = {version="1.0", features=["full"]}
+warp = "0.3"
 anyhow = "1"
 uuid = { version = "0.8", features = ["serde", "v4"] }
 serde = "1"
