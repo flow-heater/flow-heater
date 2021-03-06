@@ -75,6 +75,10 @@ pub enum ReqCmd {
         id: Uuid,
         cmd_tx: Responder<Result<RequestProcessor, RequestProcessorError>>,
     },
+    GetRequestProcessors {
+        user_id: String,
+        cmd_tx: Responder<Result<Vec<RequestProcessor>, RequestProcessorError>>,
+    },
     UpdateRequestProcessor {
         id: Uuid,
         proc: RequestProcessor,
@@ -141,6 +145,19 @@ async fn process_command(cmd: ReqCmd, pool: &DbPool<DbType>) -> Result<()> {
         ReqCmd::GetRequestProcessor { id, cmd_tx } => {
             let p = self::request_processor::get_request_processor(&mut pool.acquire().await?, &id)
                 .await;
+            cmd_tx.send(p).map_err(|e| {
+                Error::msg(format!(
+                    "Unable to send Response to server handler: {:?}",
+                    e
+                ))
+            })?;
+        }
+        ReqCmd::GetRequestProcessors { user_id, cmd_tx } => {
+            let p = self::request_processor::get_request_processors(
+                &mut pool.acquire().await?,
+                &user_id,
+            )
+            .await;
             cmd_tx.send(p).map_err(|e| {
                 Error::msg(format!(
                     "Unable to send Response to server handler: {:?}",

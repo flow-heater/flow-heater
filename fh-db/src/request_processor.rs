@@ -2,7 +2,9 @@
 use super::RequestProcessorError;
 use anyhow::Result;
 use fh_core::DbConnection;
+use futures::TryStreamExt;
 use serde::{self, Deserialize, Serialize};
+use sqlx::Row;
 use std::{convert::AsRef, str::FromStr};
 use strum_macros::{self, AsRefStr, EnumString};
 use uuid::Uuid;
@@ -19,6 +21,12 @@ pub struct RequestProcessor {
     pub language: RequestProcessorLanguage,
     pub runtime: RequestProcessorRuntime,
     pub code: String,
+    #[serde(default = "anonymous")]
+    pub user_id: String,
+}
+
+fn anonymous() -> String {
+    "anonymous".to_string()
 }
 
 /// Variantes of supported language snippets.
@@ -43,17 +51,19 @@ pub(crate) async fn create_request_processor(
     data: &RequestProcessor,
 ) -> Result<(), RequestProcessorError> {
     let id_str = data.id.to_string();
+    let user_id_str = data.user_id.to_string();
     let language = data.language.as_ref();
     let runtime = data.runtime.as_ref();
     sqlx::query!(
         r#"INSERT INTO request_processor
-                    (id, name, language, runtime, code)
-                    VALUES (?1, ?2, ?3, ?4, ?5)"#,
+                    (id, name, language, runtime, code, user_id)
+                    VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
         id_str,
         data.name,
         language,
         runtime,
-        data.code
+        data.code,
+        user_id_str,
     )
     .execute(conn)
     .await?;
@@ -87,8 +97,35 @@ pub(crate) async fn get_request_processor(
             language: RequestProcessorLanguage::from_str(&row.language)?,
             runtime: RequestProcessorRuntime::from_str(&row.runtime)?,
             code: row.code,
+            user_id: row.user_id,
         }),
     }
+}
+
+/// Fetches all RequestProcessor for the given User UUID.
+pub(crate) async fn get_request_processors(
+    conn: &mut DbConnection,
+    user_id: &String,
+) -> Result<Vec<RequestProcessor>, RequestProcessorError> {
+    let id_str = user_id.to_string();
+    let mut items = Vec::new();
+
+    let mut rows = sqlx::query("SELECT * FROM request_processor WHERE user_id = ?1")
+        .bind(id_str)
+        .fetch(conn);
+
+    while let Some(row) = rows.try_next().await? {
+        items.push(RequestProcessor {
+            id: Uuid::from_str(row.try_get("id")?)?,
+            name: row.try_get("name")?,
+            code: row.try_get("code")?,
+            language: RequestProcessorLanguage::from_str(row.try_get("language")?)?,
+            runtime: RequestProcessorRuntime::from_str(row.try_get("runtime")?)?,
+            user_id: row.try_get("user_id")?,
+        });
+    }
+
+    Ok(items)
 }
 
 /// Updates a RequestProcessor with the given struct.

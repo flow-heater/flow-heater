@@ -52,7 +52,7 @@ async fn try_extract_request(
 #[macro_export]
 macro_rules! proc_cmd {
     ($ctx: expr, $cmd: expr, $cmd_rx: ident) => {{
-        let mut tx2 = $ctx
+        let tx2 = $ctx
             .tx_proc
             .lock()
             .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?
@@ -72,7 +72,7 @@ macro_rules! proc_cmd {
 #[macro_export]
 macro_rules! db_cmd {
     ($ctx: expr, $cmd: expr, $cmd_rx: ident) => {{
-        let mut tx2 = $ctx
+        let tx2 = $ctx
             .tx_db
             .lock()
             .map_err(|e| warp::reject::custom(FhLockingError::new(e.to_string())))?

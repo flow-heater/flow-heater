@@ -8,6 +8,8 @@ from fh.gateway.config import Config
 from fh.gateway.proxy import proxy_fh_request
 from starlette.middleware.sessions import SessionMiddleware
 
+from fh.gateway.auth import FhAuth0CurrentUser
+
 config: Config = Config.from_env()
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=config.session_secret)
@@ -25,7 +27,7 @@ oauth.register(
 
 
 auth0 = Auth0(domain=config.auth0.domain)
-get_current_user = Auth0CurrentUser(domain=config.auth0.domain)
+get_current_user = FhAuth0CurrentUser(domain=config.auth0.domain)
 
 
 # HINT: using @app.route() fails, because it does somehow not resolve the
@@ -34,11 +36,11 @@ get_current_user = Auth0CurrentUser(domain=config.auth0.domain)
 @app.post("/admin/{tail:path}")
 @app.put("/admin/{tail:path}")
 @app.delete("/admin/{tail:path}")
-async def admin(request: Request, user: Auth0CurrentUser = Depends(get_current_user)):
+async def admin(request: Request, user: FhAuth0CurrentUser = Depends(get_current_user)):
     """
     Proxies all requests to the `/admin` endpoint upstream. Requires a logged in user.
     """
-    r = await proxy_fh_request(config.core.upstream, request, None)
+    r = await proxy_fh_request(config.core.upstream, request, user)
     return r
 
 

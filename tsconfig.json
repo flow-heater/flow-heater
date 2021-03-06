@@ -1,0 +1,3 @@
+{
+    "extends": "./fh-frontend/tsconfig.json"
+}

@@ -1,0 +1,1 @@
+ALTER TABLE request_processor ADD COLUMN user_id TEXT NOT NULL;
