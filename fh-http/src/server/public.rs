@@ -67,6 +67,15 @@ pub(crate) mod handlers {
     use warp::{Rejection, Reply};
 
     /// Run a RequestProcessor.
+    #[tracing::instrument(
+        name = "Executing a request processor.",
+        skip(ctx),
+        fields(
+            request_id = %Uuid::new_v4(),
+            processor_id = %id,
+            %prelude,
+        )
+    )]
     pub(crate) async fn run_request_processor(
         id: Uuid,
         ctx: AppContext,
@@ -85,6 +94,7 @@ pub(crate) mod handlers {
             },
             cmd_rx
         );
+        tracing::info!("Request processor executed successfully.");
 
         Ok(warp::reply::with_header(
             warp::reply::json(&res),

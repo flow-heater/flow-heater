@@ -1,6 +1,6 @@
 // import this first, to have the macros available
 #[macro_use]
-mod util;
+pub(crate) mod util;
 
 pub(crate) mod admin;
 pub(crate) mod conversation;
@@ -13,6 +13,7 @@ use crate::server::public::filters::public_filters;
 use fh_core::ReqSender;
 use fh_db::ReqCmd;
 use fh_v8::ProcessorCmd;
+use tracing;
 use warp::Filter;
 
 /// Contain application specific configuration variables. This will include
@@ -29,9 +30,10 @@ pub(crate) async fn web_server(ctx: AppContext, cfg: &Config) {
     let routes = public_filters(&ctx)
         .or(admin_filters(&ctx))
         .or(conversation_filters(&ctx))
-        .with(warp::log("fh-core"))
+        .with(warp::trace::request())
         .recover(error::handle_rejections);
 
+    tracing::info!("Running fh-http webserver on port: '{}'", cfg.port);
     warp::serve(routes).run(([127, 0, 0, 1], cfg.port)).await
 }
 

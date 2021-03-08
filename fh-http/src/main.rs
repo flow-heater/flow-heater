@@ -1,6 +1,9 @@
 mod server;
 
-use crate::server::web_server;
+use crate::server::{
+    util::{get_standard_subscriber, init_subscriber},
+    web_server,
+};
 use anyhow::Result;
 use dotenv::dotenv;
 use fh_db::request_manager;
@@ -11,11 +14,14 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio::sync::mpsc;
+use tracing;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv()?;
-    pretty_env_logger::init();
+
+    let subscriber = get_standard_subscriber("fh-http".into(), "info".into());
+    init_subscriber(subscriber);
 
     let config = Config {
         port: env::var("CORE_PORT")
@@ -28,6 +34,7 @@ async fn main() -> Result<()> {
     let (tx_v8, mut rx_v8) = mpsc::channel(4096);
     let ctx = AppContext::new(Arc::new(Mutex::new(tx_db)), Arc::new(Mutex::new(tx_v8)));
 
+    tracing::info!("Starting fh-http ...");
     let (_web_server, req_manager, req_proc_manager) = tokio::join!(
         web_server(ctx, &config),
         request_manager(&mut rx_db),
@@ -36,6 +43,7 @@ async fn main() -> Result<()> {
 
     req_manager?;
     req_proc_manager?;
+    tracing::info!("fh-http is stopped ...");
 
     Ok(())
 }

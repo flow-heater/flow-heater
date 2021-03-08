@@ -1,5 +1,7 @@
 export RUST_BACKTRACE := "1"
-export RUST_LOG := "fh-core"
+
+# use INFO for all libraries, TRACE for fh-http
+export RUST_LOG := "info,fh-http=trace"
 
 # The default recipe. Show all available recipes.
 default:

@@ -13,6 +13,7 @@ use fh_db::{
 use runtime::RuntimeState;
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
+use tracing::{self};
 use uuid::Uuid;
 
 /// Async function which can be run e.g. by tokio which loops forever and
@@ -219,7 +220,7 @@ async fn create_request_conversation(
         })
         .await
         .map_err(anyhow::Error::new)?;
-
+    tracing::info!("HELLLO WORLD from fh_v8: {}", request_processor_id);
     cmd_rx2
         .await
         .map_err(|_| Error::msg(format!("Unable to send () to server handler")))?

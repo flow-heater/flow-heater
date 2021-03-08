@@ -1,9 +1,46 @@
 use crate::server::error::FhHttpError;
 use fh_core::request::Request;
 use std::convert::TryFrom;
+use tracing::{subscriber::set_global_default, Subscriber};
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_log::LogTracer;
+use tracing_subscriber::{fmt::format::FmtSpan, layer::SubscriberExt, EnvFilter, Registry};
 use warp::{http, Filter, Rejection};
 
 use super::AppContext;
+
+pub(crate) fn _get_json_subscriber(
+    name: String,
+    env_filter: String,
+) -> impl Subscriber + Send + Sync {
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
+    let json_formatting_layer = BunyanFormattingLayer::new(name, std::io::stdout);
+    Registry::default()
+        .with(env_filter)
+        .with(JsonStorageLayer)
+        .with(json_formatting_layer)
+}
+
+pub(crate) fn get_standard_subscriber(
+    _name: String,
+    env_filter: String,
+) -> impl Subscriber + Send + Sync {
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
+    let standard_formatting_layer = tracing_subscriber::fmt::layer()
+        .with_target(true)
+        .with_span_events(FmtSpan::CLOSE);
+    Registry::default()
+        .with(env_filter)
+        .with(JsonStorageLayer)
+        .with(standard_formatting_layer)
+}
+
+pub(crate) fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
+    LogTracer::init().expect("Failed to set logger");
+    set_global_default(subscriber).expect("Failed to set subscriber");
+}
 
 /// Warp filter which wraps the [`AppContext`].
 pub(crate) fn with_ctx(
