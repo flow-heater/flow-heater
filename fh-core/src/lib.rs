@@ -1,4 +1,4 @@
-use sqlx::{pool::PoolConnection, Pool, Sqlite, SqlitePool};
+use sqlx::{pool::PoolConnection, postgres::PgPool, Pool, Postgres};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -25,11 +25,11 @@ pub type DbPool<T> = Pool<T>;
 
 /// Alias for a typed database pool. Needed to easily change to a different pool
 /// type later on.
-pub type TypedPool = SqlitePool;
+pub type TypedPool = PgPool;
 
 /// Alias for a typed database. Needed to easily change to a different database
 /// type later on.
-pub type DbType = Sqlite;
+pub type DbType = Postgres;
 
 /// Alias for the database connection.
 pub type DbConnection = PoolConnection<DbType>;

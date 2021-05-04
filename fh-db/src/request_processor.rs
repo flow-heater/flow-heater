@@ -42,14 +42,13 @@ pub(crate) async fn create_request_processor(
     conn: &mut DbConnection,
     data: &RequestProcessor,
 ) -> Result<(), RequestProcessorError> {
-    let id_str = data.id.to_string();
     let language = data.language.as_ref();
     let runtime = data.runtime.as_ref();
     sqlx::query!(
         r#"INSERT INTO request_processor
                     (id, name, language, runtime, code)
-                    VALUES (?1, ?2, ?3, ?4, ?5)"#,
-        id_str,
+                    VALUES ($1, $2, $3, $4, $5)"#,
+        data.id,
         data.name,
         language,
         runtime,
@@ -66,8 +65,7 @@ pub(crate) async fn get_request_processor(
     conn: &mut DbConnection,
     id: &Uuid,
 ) -> Result<RequestProcessor, RequestProcessorError> {
-    let id_str = id.to_string();
-    let row = sqlx::query!(r#"SELECT * FROM request_processor WHERE id = ?1"#, id_str)
+    let row = sqlx::query!(r#"SELECT * FROM request_processor WHERE id = $1"#, id)
         .fetch_one(conn)
         .await;
 
@@ -98,18 +96,17 @@ pub(crate) async fn update_request_processor(
     data: &mut RequestProcessor,
 ) -> Result<(), RequestProcessorError> {
     let _ = get_request_processor(conn, id).await?;
-    let id_str = id.to_string();
     let language = data.language.as_ref();
     let runtime = data.runtime.as_ref();
     sqlx::query!(
         r#"UPDATE request_processor
-           SET name=?1, language=?2, runtime=?3, code=?4
-           WHERE id=?5"#,
+           SET name=$1, language=$2, runtime=$3, code=$4
+           WHERE id=$5"#,
         data.name,
         language,
         runtime,
         data.code,
-        id_str,
+        id,
     )
     .execute(conn)
     .await?;
@@ -125,11 +122,10 @@ pub(crate) async fn delete_request_processor(
     id: &Uuid,
 ) -> Result<(), RequestProcessorError> {
     let _ = get_request_processor(conn, id).await?;
-    let id_str = id.to_string();
     sqlx::query!(
         r#"DELETE FROM request_processor
-           WHERE id=?1"#,
-        id_str,
+           WHERE id=$1"#,
+        id,
     )
     .execute(conn)
     .await?;
