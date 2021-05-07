@@ -13,7 +13,7 @@ class Fh {
             data: data
         };
 
-        await Deno.core.jsonOpAsync("fh_log", spec);
+        await Deno.core.opAsync("fh_log", spec);
         Deno.core.print(`${data}\n`);
     };
 
@@ -24,15 +24,15 @@ class Fh {
             "request": request
         };
 
-        return await Deno.core.jsonOpAsync("dispatch_request", spec);
+        return await Deno.core.opAsync("dispatch_request", spec);
     };
 
     async respond_with(response) {
-        return await Deno.core.jsonOpAsync("respond_with", response);
+        return await Deno.core.opAsync("respond_with", response);
     };
 
     get_request() {
-        return Deno.core.jsonOpSync("get_request", []);
+        return Deno.core.opSync("get_request", []);
     };
 }
 
