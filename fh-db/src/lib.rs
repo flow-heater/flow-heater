@@ -1,12 +1,14 @@
 use self::request_processor::RequestProcessor;
-use anyhow::{Context, Error, Result};
-use fh_core::{DbPool, DbType, Responder, TypedPool};
+use anyhow::{Error, Result};
+use configuration::DatabaseSettings;
+use fh_core::{DbPool, DbType, Responder};
 use request_conversation::{AuditItem, RequestConversation};
-use std::env;
+use sqlx::postgres::PgPoolOptions;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
+pub mod configuration;
 pub mod request_conversation;
 pub mod request_processor;
 
@@ -104,10 +106,14 @@ pub enum ReqCmd {
 
 /// Async function which can be run e.g. by tokio which loops forever and
 /// receives [`ReqCmd`] commands via the given Receiver.
-pub async fn request_manager(rx: &mut mpsc::Receiver<ReqCmd>) -> anyhow::Result<()> {
-    let pool = TypedPool::connect(&env::var("DATABASE_URL")?)
-        .await
-        .context("Connection to DB failed")?;
+pub async fn request_manager(
+    rx: &mut mpsc::Receiver<ReqCmd>,
+    settings: &DatabaseSettings,
+) -> anyhow::Result<()> {
+    let pool = PgPoolOptions::new()
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .connect_with(settings.with_db())
+        .await?;
 
     while let Some(cmd) = rx.recv().await {
         process_command(cmd, &pool).await?;

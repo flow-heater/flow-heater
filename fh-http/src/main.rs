@@ -16,11 +16,11 @@ async fn main() -> Result<()> {
 
     let (tx_db, mut rx_db) = mpsc::channel(4096);
     let (tx_v8, mut rx_v8) = mpsc::channel(4096);
-    let application = Application::build(configuration, tx_db, tx_v8).await?;
+    let application = Application::build(configuration.clone(), tx_db, tx_v8).await?;
 
     let (app, db, v8) = tokio::join!(
         application.run_until_stopped(),
-        request_manager(&mut rx_db),
+        request_manager(&mut rx_db, &configuration.database),
         request_processing_manager(&mut rx_v8)
     );
 

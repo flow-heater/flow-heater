@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom};
 use warp::http;
 
-use crate::{response::Response, try_header_map_to_hashmap, version_to_string};
+use crate::{
+    response::Response, try_actix_header_map_to_hashmap, try_header_map_to_hashmap,
+    version_to_string,
+};
 
 /// Simple wrapper type which contains the request to be made and a URL, where
 /// the request should be sent to.
@@ -36,6 +39,21 @@ impl TryFrom<http::Request<Vec<u8>>> for Request {
             path: parts.uri.path().to_string(),
             query: parts.uri.query().and_then(|x| Some(x.to_string())),
             version: version_to_string(parts.version),
+        })
+    }
+}
+
+impl TryFrom<actix_web::HttpRequest> for Request {
+    type Error = anyhow::Error;
+
+    fn try_from(value: actix_web::HttpRequest) -> Result<Self, Self::Error> {
+        Ok(Request {
+            body: "".into(),
+            headers: try_actix_header_map_to_hashmap(value.headers().clone())?,
+            method: value.method().to_string(),
+            path: value.uri().to_string(),
+            query: Some(value.query_string().to_string()),
+            version: version_to_string(value.version()),
         })
     }
 }
