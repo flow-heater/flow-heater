@@ -1,8 +1,8 @@
 use anyhow::Result;
+use deno_core::error::AnyError;
 use deno_core::JsRuntime;
 use deno_core::OpState;
 use deno_core::ZeroCopyBuf;
-use deno_core::{error::AnyError, BufVec};
 use fh_core::{
     request::{Request, RequestResponseList, RequestSpec},
     response::Response,
@@ -182,24 +182,24 @@ impl RequestCounter {
 }
 
 /// Represents the `get_request` function, which can be called from the JsRuntime
-/// using `Deno.core.jsonOpAsync("get_request")`.
+/// using `Deno.core.opSync("get_request")`.
 /// Returns a JSON representation of the incoming HTTP Request of the the [`fh_core::request::Request`].
 fn op_get_request(
     state: &mut OpState,
     _args: Value,
-    _bufs: &mut [ZeroCopyBuf],
+    _bufs: Option<ZeroCopyBuf>,
 ) -> Result<Value, AnyError> {
     let r = state.borrow::<RuntimeState>();
     Ok(serde_json::json!(r.request))
 }
 
 /// Adds a final response, which shall be returned to the client. Represents the `respond_with` function, which can be called from the JsRuntime
-/// using `Deno.core.jsonOpAsync("respond_with", response)`.
+/// using `Deno.core.opAsync("respond_with", response)`.
 /// The response object is a JSON representation of [`fh_core::response::Response`].
 async fn op_respond_with(
     state: Rc<RefCell<OpState>>,
     args: Value,
-    _bufs: BufVec,
+    _bufs: Option<ZeroCopyBuf>,
 ) -> Result<Value, AnyError> {
     let response: Response = serde_json::from_value(args)?;
     let mut op_state = state.borrow_mut();
@@ -211,7 +211,7 @@ async fn op_respond_with(
 }
 
 /// Represents the `fh_log` function, which can be called from the JsRuntime
-/// using `Deno.core.jsonOpAsync("fh_log", spec)`.
+/// using `Deno.core.opAsync("fh_log", spec)`.
 /// The `spec` object has one key:
 /// - data: String to be logged.
 ///
@@ -220,7 +220,7 @@ async fn op_respond_with(
 async fn op_log(
     state: Rc<RefCell<OpState>>,
     args: Value,
-    _bufs: BufVec,
+    _bufs: Option<ZeroCopyBuf>,
 ) -> Result<Value, AnyError> {
     let log_entry = args
         .get("data")
@@ -237,7 +237,7 @@ async fn op_log(
 }
 
 /// Represents the `dispatch_request` function, which can be called from the
-/// JsRuntime using `Deno.core.jsonOpAsync("dispatch_request", spec)`. The
+/// JsRuntime using `Deno.core.opAsync("dispatch_request", spec)`. The
 /// `spec` object has two keys:
 /// - request: regular request object, based on [`fh_core::request::Request`]
 /// - url: fully qualified URL, where the request should be sent to.
@@ -252,7 +252,7 @@ async fn op_log(
 async fn op_dispatch_request(
     state: Rc<RefCell<OpState>>,
     args: Value,
-    _bufs: BufVec,
+    _bufs: Option<ZeroCopyBuf>,
 ) -> Result<Value, AnyError> {
     let request_spec: RequestSpec = serde_json::from_value(args)?;
 
@@ -287,13 +287,10 @@ pub(crate) async fn prepare_runtime(
 ) -> anyhow::Result<JsRuntime> {
     let mut js_runtime = JsRuntime::new(Default::default());
 
-    js_runtime.register_op(
-        "dispatch_request",
-        deno_core::json_op_async(op_dispatch_request),
-    );
-    js_runtime.register_op("fh_log", deno_core::json_op_async(op_log));
-    js_runtime.register_op("respond_with", deno_core::json_op_async(op_respond_with));
-    js_runtime.register_op("get_request", deno_core::json_op_sync(op_get_request));
+    js_runtime.register_op("dispatch_request", deno_core::op_async(op_dispatch_request));
+    js_runtime.register_op("fh_log", deno_core::op_async(op_log));
+    js_runtime.register_op("respond_with", deno_core::op_async(op_respond_with));
+    js_runtime.register_op("get_request", deno_core::op_sync(op_get_request));
 
     js_runtime
         .op_state()

@@ -228,17 +228,15 @@ pub(crate) async fn create_request_conversation(
     let conversation_id = Uuid::new_v4();
 
     let _p = get_request_processor(conn, request_processor_id).await?;
-    let id_str = conversation_id.to_string();
-    let req_id_str = request_processor_id.to_string();
     let now = Utc::now();
     let now_str = now.to_rfc3339();
     sqlx::query!(
         r#"INSERT INTO request_conversation
                     (id, created_at, request_processor)
-                    VALUES (?1, ?2, ?3)"#,
-        id_str,
+                    VALUES ($1, $2, $3)"#,
+        conversation_id,
         now_str,
-        req_id_str,
+        request_processor_id,
     )
     .execute(conn)
     .await?;
@@ -257,13 +255,9 @@ pub(crate) async fn get_request_conversation(
     conn: &mut DbConnection,
     id: &Uuid,
 ) -> Result<RequestConversation, RequestProcessorError> {
-    let id_str = id.to_string();
-    let row = sqlx::query!(
-        r#"SELECT * FROM request_conversation WHERE id = ?1"#,
-        id_str
-    )
-    .fetch_one(&mut *conn)
-    .await;
+    let row = sqlx::query!(r#"SELECT * FROM request_conversation WHERE id = $1"#, id)
+        .fetch_one(&mut *conn)
+        .await;
 
     match row {
         Err(x) => match x {
@@ -278,7 +272,7 @@ pub(crate) async fn get_request_conversation(
         Ok(row) => Ok(RequestConversation {
             id: *id,
             created_at: DateTime::parse_from_rfc3339(&row.created_at)?.with_timezone(&Utc),
-            request_processor_id: Uuid::from_str(&row.request_processor)?,
+            request_processor_id: row.request_processor,
             audit_items: get_audit_items(conn, id).await?,
         }),
     }
@@ -340,22 +334,19 @@ pub(crate) async fn create_audit_item(
 ) -> Result<AuditItem, RequestProcessorError> {
     let db_item = item.to_audit_db_item()?;
     let conv = get_request_conversation(conn, &db_item.conversation_id).await?;
-    let item_id_str = db_item.id.to_string();
-    let conv_id_str = conv.id.to_string();
     let created_at = Utc::now().to_rfc3339();
     let payload = db_item.payload;
-    let request_id_str = db_item.request_id.and_then(|x| Some(x.to_string()));
 
     sqlx::query!(
         r#"INSERT INTO conversation_audit_item
                     (id, kind, created_at, inc, request_conversation, parent, payload)
-                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"#,
-        item_id_str,
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+        db_item.id,
         db_item.kind,
         created_at,
         db_item.inc,
-        conv_id_str,
-        request_id_str,
+        conv.id,
+        db_item.request_id,
         payload,
     )
     .execute(conn)

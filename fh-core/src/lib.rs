@@ -1,8 +1,6 @@
-use sqlx::{pool::PoolConnection, Pool, Sqlite, SqlitePool};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use actix_web::http::HeaderMap as ActixHeaderMap;
+use sqlx::{pool::PoolConnection, postgres::PgPool, Pool, Postgres};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::oneshot::error::RecvError;
 use tokio::sync::{mpsc, oneshot};
 use warp::{
@@ -18,18 +16,18 @@ pub mod response;
 pub type Responder<T> = oneshot::Sender<T>;
 
 /// Generic type alias for cross-thread clonable mpsc::Senders.
-pub type ReqSender<T> = Arc<Mutex<mpsc::Sender<T>>>;
+pub type ReqSender<T> = Arc<mpsc::Sender<T>>;
 
 /// Generic type alias for the SQLX DB Pool.
 pub type DbPool<T> = Pool<T>;
 
 /// Alias for a typed database pool. Needed to easily change to a different pool
 /// type later on.
-pub type TypedPool = SqlitePool;
+pub type TypedPool = PgPool;
 
 /// Alias for a typed database. Needed to easily change to a different database
 /// type later on.
-pub type DbType = Sqlite;
+pub type DbType = Postgres;
 
 /// Alias for the database connection.
 pub type DbConnection = PoolConnection<DbType>;
@@ -69,6 +67,21 @@ impl Reject for FhProcessorError<RecvError> {}
 /// [`http::header::map::HeaderMap`] to a serializable HashMap.
 fn try_header_map_to_hashmap(
     hm: HeaderMap<HeaderValue>,
+) -> Result<HashMap<String, Vec<String>>, anyhow::Error> {
+    let mut res: HashMap<String, Vec<String>> = HashMap::new();
+    hm.keys().for_each(|k| {
+        hm.get_all(k).into_iter().for_each(|v| {
+            res.entry(k.to_string())
+                .and_modify(|e| e.push(v.to_str().unwrap_or("").to_string()))
+                .or_insert(vec![v.to_str().unwrap_or("").to_string()]);
+        })
+    });
+
+    Ok(res)
+}
+
+fn try_actix_header_map_to_hashmap(
+    hm: ActixHeaderMap,
 ) -> Result<HashMap<String, Vec<String>>, anyhow::Error> {
     let mut res: HashMap<String, Vec<String>> = HashMap::new();
     hm.keys().for_each(|k| {

@@ -178,10 +178,7 @@ async fn create_request_processor(
     tx_db: ReqSender<ReqCmd>,
     proc: RequestProcessor,
 ) -> Result<RequestProcessor, RequestProcessorError> {
-    let mut tx_db2 = tx_db
-        .lock()
-        .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
-        .clone();
+    let tx_db2 = tx_db.clone();
 
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
 
@@ -204,10 +201,7 @@ async fn create_request_conversation(
     tx_db: ReqSender<ReqCmd>,
     request_processor_id: Uuid,
 ) -> Result<RequestConversation, RequestProcessorError> {
-    let mut tx_db2 = tx_db
-        .lock()
-        .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
-        .clone();
+    let tx_db2 = tx_db.clone();
 
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
 
@@ -229,10 +223,7 @@ async fn get_request_processor(
     tx_db: ReqSender<ReqCmd>,
     id: Uuid,
 ) -> Result<RequestProcessor, RequestProcessorError> {
-    let mut tx_db2 = tx_db
-        .lock()
-        .map_err(|e| RequestProcessorError::Locking(e.to_string()))?
-        .clone();
+    let tx_db2 = tx_db.clone();
 
     let (cmd_tx2, cmd_rx2) = oneshot::channel();
 
